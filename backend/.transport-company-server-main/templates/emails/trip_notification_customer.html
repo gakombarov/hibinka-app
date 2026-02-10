@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; margin: 20px 0; }
+        .info-row { margin: 10px 0; }
+        .label { font-weight: bold; color: #555; }
+        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Подтверждение поездки #{{ trip.id }}</h2>
+        </div>
+        
+        <div class="content">
+            <p>Здравствуйте, {{ customer_name }}!</p>
+            
+            <p>
+                {% if notification_type == 'created' %}Ваша поездка успешно забронирована.{% endif %}
+                {% if notification_type == 'updated' %}В вашей поездке произошли изменения.{% endif %}
+                {% if notification_type == 'cancelled' %}Ваша поездка отменена.{% endif %}
+                {% if notification_type == 'completed' %}Ваша поездка завершена.{% endif %}
+            </p>
+            
+            <h3>Детали поездки:</h3>
+            
+            <div class="info-row">
+                <span class="label">Дата:</span> {{ trip_date }} в {{ departure_time }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Маршрут:</span> {{ departure_location }} → {{ arrival_location }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Водитель:</span> {{ driver_name }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Стоимость:</span> {{ trip.cost }} ₽
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>По всем вопросам обращайтесь по телефону: +7 (XXX) XXX-XX-XX</p>
+            <p>© Транспортная компания 2026</p>
+        </div>
+    </div>
+</body>
+</html>
