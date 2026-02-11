@@ -9,8 +9,8 @@ app = FastAPI(
     version=settings.VERSION,
     description="Hibinka API",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url="/docs",  # Swagger UI
-    redoc_url="/redoc",  # ReDoc
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 

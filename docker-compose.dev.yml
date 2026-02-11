@@ -5,7 +5,7 @@ services:
     image: postgres:15-alpine
     container_name: hibinka-db-dev
     env_file:
-      - .env.example
+      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -15,7 +15,7 @@ services:
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,10 +29,12 @@ services:
     container_name: hibinka-backend-dev
     ports:
       - "8000:8000"
+    env_file:
+      - .env.example
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/hibinka_db
-      SECRET_KEY: dev-secret-key-12345
-      ALLOWED_ORIGINS: http://localhost:3000
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     depends_on:
       db:
         condition: service_healthy
