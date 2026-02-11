@@ -12,9 +12,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY ./app /app/app
-COPY ./alembic /app/alembic
-COPY alembic.ini /app/
 
-EXPOSE 8080 
+EXPOSE 8000
 
-CMD = ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

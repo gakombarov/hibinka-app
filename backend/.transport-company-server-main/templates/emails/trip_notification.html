@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; margin: 20px 0; }
+        .info-row { margin: 10px 0; }
+        .label { font-weight: bold; color: #555; }
+        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>
+                {% if notification_type == 'created' %}Новая поездка{% endif %}
+                {% if notification_type == 'updated' %}Изменение поездки{% endif %}
+                {% if notification_type == 'cancelled' %}Отмена поездки{% endif %}
+                {% if notification_type == 'completed' %}Поездка завершена{% endif %}
+            </h2>
+        </div>
+        
+        <div class="content">
+            <h3>Детали поездки #{{ trip.id }}</h3>
+            
+            <div class="info-row">
+                <span class="label">Дата:</span> {{ trip_date }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Время отправления:</span> {{ departure_time }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Откуда:</span> {{ departure_location }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Куда:</span> {{ arrival_location }}
+            </div>
+            
+            {% if trip.stops.all %}
+            <div class="info-row">
+                <span class="label">Остановки:</span>
+                <ul>
+                    {% for stop in trip.stops.all %}
+                    <li>{{ stop.stop_order }}. {{ stop.location }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+                <span class="label">Заказчик:</span> {{ customer_name }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Пассажиров:</span> {{ trip.passenger_count }}
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Автомобиль:</span> {{ trip.vehicle.get_full_name }}
+            </div>
+            
+            {% if trip.notes %}
+            <div class="info-row">
+                <span class="label">Примечания:</span> {{ trip.notes }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            <p>Это автоматическое уведомление. Не отвечайте на это письмо.</p>
+            <p>© Транспортная компания 2026</p>
+        </div>
+    </div>
+</body>
+</html>

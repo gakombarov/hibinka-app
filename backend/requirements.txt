@@ -1,16 +1,25 @@
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-pydantic==2.9.2
-pydantic-settings==2.6.0
-sqlalchemy==2.0.36
-asyncpg==0.30.0
-alembic==1.14.0
+# FastAPI и сервер
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# База данных (ASYNC)
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+greenlet==3.0.3
+alembic==1.13.1
+
+# Безопасность и JWT
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.12
-email-validator==2.2.0
-python-dotenv==1.0.1
-fastapi-cors==0.0.6
-redis==5.2.0
-celery==5.4.0
-httpx==0.28.0
+bcrypt==4.1.2
+
+# Email
+python-decouple==3.8
+aiosmtplib==3.0.1
+
+# Утилиты
+python-dotenv==1.0.0
+email-validator==2.1.0
