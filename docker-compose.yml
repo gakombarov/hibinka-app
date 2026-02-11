@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile
     container_name: hibinka-backend
     env_file:
-      - .env
+      - .env.dev
     ports:
       - "8000:8000"
     environment:
