@@ -50,6 +50,7 @@ async def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section) or {}
     configuration["sqlalchemy.url"] = settings.DATABASE_URL
+    print(f"DEBUG: Alembic is connecting to: {settings.DATABASE_URL}")
 
     connectable = async_engine_from_config(
         configuration,

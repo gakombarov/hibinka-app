@@ -15,9 +15,11 @@ async def create(db: AsyncSession, obj_in: UserCreate) -> User:
     db_obj = User(
         email=obj_in.email,
         hashed_password=await get_password_hash(obj_in.password),
-        full_name=obj_in.full_name,
+        first_name=obj_in.first_name,
+        last_name=obj_in.last_name,
+        avatar=obj_in.avatar,
         phone=obj_in.phone,
-        role=obj_in.role,
+        account_type=obj_in.account_type,
         is_active=obj_in.is_active,
     )
     db.add(db_obj)
