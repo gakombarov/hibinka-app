@@ -23,12 +23,6 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
-    email: Optional[EmailStr] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    avatar: Optional[str] = None
-    phone: Optional[str] = None
-    account_type: Optional[UserRole] = None
     is_active: Optional[bool] = None
 
 
