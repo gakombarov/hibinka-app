@@ -46,3 +46,7 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Custom Ignore
+backend/.transport-company-server-main/
+frontend/.Passenger Transportation Service UI/
