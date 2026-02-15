@@ -49,4 +49,4 @@ htmlcov/
 
 # Custom Ignore
 backend/.transport-company-server-main/
-frontend/.Passenger Transportation Service UI/
+frontend/Passenger Transportation Service UI/
