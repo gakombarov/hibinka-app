@@ -5,18 +5,17 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
-import { theme } from "./theme"; // Импортируем тему
+import { theme } from "./theme";
 
-// Расширяем стандартные пропсы MUI
 interface HibinkaButtonProps extends MuiButtonProps {
-  isLoading?: boolean; // Добавляем состояние загрузки
-  rounded?: boolean; // Опция для полностью круглых кнопок
+  isLoading?: boolean;
+  rounded?: boolean;
 }
 
 export const Button: React.FC<HibinkaButtonProps> = ({
   children,
-  variant = "contained", // По умолчанию залитая кнопка
-  color = "primary", // По умолчанию желтая
+  variant = "contained",
+  color = "primary",
   isLoading = false,
   rounded = false,
   disabled,
@@ -24,8 +23,6 @@ export const Button: React.FC<HibinkaButtonProps> = ({
   ...props
 }) => {
   return (
-    // Оборачиваем в ThemeProvider, чтобы кнопка всегда знала свои цвета,
-    // даже если используется изолированно
     <ThemeProvider theme={theme}>
       <MuiButton
         variant={variant}
@@ -39,7 +36,7 @@ export const Button: React.FC<HibinkaButtonProps> = ({
               : props.size === "small"
                 ? "32px"
                 : "40px",
-          ...sx, // Позволяем переопределять стили снаружи
+          ...sx,
         }}
         {...props}
       >
