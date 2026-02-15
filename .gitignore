@@ -46,3 +46,6 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Frontend UI
+frontend/Passenger Transportation Service UI/

@@ -3,27 +3,22 @@ import { createTheme } from "@mui/material/styles";
 export const theme = createTheme({
   palette: {
     primary: {
-      main: "#FFC107",
-      contrastText: "#000000",
+      main: "#F4C430",
+      contrastText: "#1a1a1a",
     },
     secondary: {
-      main: "#212121",
-      contrastText: "#FFFFFF",
+      main: "#333333",
+      contrastText: "#ffffff",
     },
-    background: {
-      default: "#F5F5F5",
-      paper: "#FFFFFF",
+    error: {
+      main: "#ef4444",
     },
-    text: {
-      primary: "#212121",
-      secondary: "#757575",
+    success: {
+      main: "#22c55e",
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 700,
-    },
+    fontFamily: "Inter, Roboto, sans-serif",
     button: {
       textTransform: "none",
       fontWeight: 600,
@@ -33,7 +28,11 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: "8px",
+          boxShadow: "none",
+          "&:hover": {
+            boxShadow: "none",
+          },
         },
       },
     },
