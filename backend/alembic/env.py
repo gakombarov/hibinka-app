@@ -1,7 +1,5 @@
 import asyncio
 from logging.config import fileConfig
-import sys
-import os
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -9,25 +7,32 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-sys.path.append(os.getcwd())
+from app.config import settings
 
-from app.core.config import settings
-from app.models.base import Base
+# Импортируем модели, чтобы Alembic увидел их metadata
 from app.models.user import User
+from app.models.booking import Booking
+from app.models.scheduled_trip import ScheduledTrip
 
-# from app.models.booking import Booking
-
+# Получаем конфиг Alembic
 config = context.config
 
+# Настраиваем логирование
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+# ВАЖНО: Переопределяем URL базы данных значением из настроек приложения
+# Это гарантирует, что Alembic использует тот же URL, что и само приложение
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+
+# Указываем metadata, где хранятся наши модели.
+# Используем User.metadata, так как User точно привязан к правильному Base.
+target_metadata = User.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = settings.DATABASE_URL
+    """Запуск миграций в 'offline' режиме (без подключения к БД)."""
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -40,6 +45,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    """Вспомогательная функция для запуска миграций в online режиме."""
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
@@ -47,13 +53,9 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
-    print(f"DEBUG: Alembic is connecting to: {settings.DATABASE_URL}")
-
+    """Запуск миграций в 'online' режиме (с подключением к БД)."""
     connectable = async_engine_from_config(
-        configuration,
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
