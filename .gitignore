@@ -48,4 +48,6 @@ logs/
 htmlcov/
 
 # Frontend UI
+# Custom Ignore
+backend/.transport-company-server-main/
 frontend/Passenger Transportation Service UI/
