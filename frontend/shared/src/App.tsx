@@ -1,39 +1,73 @@
-import "./App.css";
 import { Button } from "./Button";
-import { Stack, Typography } from "@mui/material";
+import { ServiceCard } from "./ServiceCard";
+import { Stack, Typography, Box, Container, Grid } from "@mui/material";
+import { services } from "./services";
 
 function App() {
   return (
-    <div className="shared-playground">
-      <Stack spacing={4} alignItems="center" sx={{ mt: 4 }}>
-        <div>
-          <h1>Hibinka Shared Components</h1>
-          <p>Здесь можно тестировать общие компоненты</p>
-        </div>
+    <Box className="shared-playground" sx={{ minHeight: "100vh", pb: 8 }}>
+      <Container maxWidth={false} sx={{ py: 4 }}>
+        <Stack spacing={6} alignItems="center">
+          {/* --- Секция 1: Тест Кнопок --- */}
+          <Box sx={{ width: "100%", textAlign: "center" }}>
+            <Typography variant="h4" gutterBottom>
+              Общие компоненты Hibinka
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 4 }}>
+              Песочница для тестирования UI компонентов
+            </Typography>
 
-        <Stack spacing={2} alignItems="center">
-          <Typography variant="h6">Buttons</Typography>
+            <Box sx={{ p: 3, border: "1px dashed #ccc", borderRadius: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Тест кнопок (из Button.tsx)
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={2}
+                justifyContent="center"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Button variant="contained" color="primary">
+                  Основная
+                </Button>
+                <Button variant="contained" color="secondary">
+                  Вторичная
+                </Button>
+                <Button variant="outlined">Контурная</Button>
+                <Button isLoading>Загрузка</Button>
+                <Button rounded>Скругленная</Button>
+              </Stack>
+            </Box>
+          </Box>
 
-          <Stack direction="row" spacing={2}>
-            <Button variant="contained" color="primary">
-              Primary
-            </Button>
-            <Button variant="contained" color="secondary">
-              Secondary
-            </Button>
-            <Button variant="outlined">Outline</Button>
-            <Button variant="text">Ghost</Button>
-          </Stack>
+          {/* --- Секция 2: Тест Карточек --- */}
+          <Box sx={{ width: "100%" }}>
+            <Typography
+              variant="h5"
+              align="center"
+              sx={{ mb: 3, fontWeight: "bold" }}
+            >
+              Предпросмотр карточек услуг
+            </Typography>
 
-          <Stack direction="row" spacing={2}>
-            <Button isLoading>Loading</Button>
-            <Button rounded>Rounded</Button>
-            <Button size="large">Large</Button>
-          </Stack>
+            <Grid container spacing={3}>
+              {services.map((service, index) => (
+                <Grid item xs={12} sm={6} lg={3} key={service.title}>
+                  <ServiceCard
+                    title={service.title}
+                    subtitle={service.subtitle}
+                    description={service.description}
+                    icon={service.icon}
+                    isActive={service.isActive}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         </Stack>
-      </Stack>
-    </div>
+      </Container>
+    </Box>
   );
 }
-
 export default App;

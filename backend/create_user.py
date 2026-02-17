@@ -3,7 +3,6 @@ import logging
 from getpass import getpass
 import bcrypt
 
-# Исправление ошибки совместимости passlib и bcrypt 4.1.0+
 if not hasattr(bcrypt, "__about__"):
 
     class About:
