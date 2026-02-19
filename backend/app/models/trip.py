@@ -67,8 +67,12 @@ class Trip(IsDeletedModel):
     status = Column(SQLEnum(TripStatus), default=TripStatus.PLANNED, nullable=False)
 
     planned_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
+    actual_amount = Column(DECIMAL(10, 2), nullable=True, default=0)
     payment_status = Column(
         SQLEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False
+    )
+    show_on_landing = Column(
+        Boolean, default=False, nullable=False, comment="Показывать ли поездку на сайте"
     )
 
     notes = Column(Text, nullable=True)

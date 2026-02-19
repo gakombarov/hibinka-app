@@ -19,7 +19,10 @@ class TripBase(BaseModel):
 
     is_regular: bool = False
     status: TripStatus = TripStatus.PLANNED
+    planned_amount: float = 0.0
+    actual_amount: Optional[float] = None
     payment_status: PaymentStatus = PaymentStatus.PENDING
+    show_on_landing: bool = False
     notes: Optional[str] = None
 
 
@@ -86,6 +89,8 @@ class TripUpdate(BaseModel):
     arrival_location: Optional[str] = None
 
     status: Optional[TripStatus] = None
+    planned_amount: Optional[float] = None
+    actual_amount: Optional[float] = None
     payment_status: Optional[PaymentStatus] = None
     notes: Optional[str] = None
 
