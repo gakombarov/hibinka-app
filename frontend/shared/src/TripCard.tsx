@@ -4,12 +4,15 @@ import {
   Card,
   Typography,
   Stack,
-  Chip,
   Stepper,
   Step,
   StepLabel,
+  StepConnector,
+  stepConnectorClasses,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import CheckIcon from "@mui/icons-material/Check";
 
 export type TripStatus = "SCHEDULED" | "ON THE WAY";
 
@@ -28,6 +31,35 @@ export interface TripCardProps {
   stops: TripStop[];
 }
 
+const CustomConnector = styled(StepConnector)(({ theme }) => ({
+  [`&.${stepConnectorClasses.alternativeLabel}`]: {
+    top: 12,
+    left: "calc(-50% + 12px)",
+    right: "calc(50% + 12px)",
+  },
+  [`& .${stepConnectorClasses.line}`]: {
+    borderColor: theme.palette.divider,
+    borderTopWidth: 1,
+  },
+}));
+
+const CustomStepIcon = () => (
+  <Box
+    sx={{
+      width: 24,
+      height: 24,
+      borderRadius: "50%",
+      bgcolor: "#F4C430",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1,
+    }}
+  >
+    <CheckIcon sx={{ color: "#fff", fontSize: 16, fontWeight: "bold" }} />
+  </Box>
+);
+
 export const TripCard: FC<TripCardProps> = ({
   departureTime,
   price,
@@ -38,190 +70,202 @@ export const TripCard: FC<TripCardProps> = ({
   stops,
 }) => {
   const isScheduled = status === "SCHEDULED";
-  const statusColor = isScheduled ? "success.main" : "primary.main";
-  const statusTextColor = isScheduled ? "#ffffff" : "#1a1a1a";
+
+  const statusDisplay = isScheduled ? "ПО РАСПИСАНИЮ" : "В ПУТИ";
+  const statusStyles = isScheduled
+    ? {
+        border: "1px solid #F4C430",
+        bgcolor: "transparent",
+        color: "#1a1a1a",
+      }
+    : {
+        border: "1px solid #E2E8F0",
+        bgcolor: "#F4F6F8",
+        color: "#1a1a1a",
+      };
 
   return (
     <Card
-      variant="outlined"
+      elevation={0}
       sx={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
-        p: 2,
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: "divider",
-        borderLeft: "6px solid",
-        borderLeftColor: statusColor,
-        boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+        p: 3,
+        borderRadius: "32px", // Сильное скругление как в макете
+        border: "1px solid #E5E7EB",
+        overflow: "hidden", // Чтобы декоративная линия не вылезала за углы
+        boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
         "&:hover": {
-          boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
+          boxShadow: "0 6px 24px rgba(0,0,0,0.06)",
         },
       }}
     >
-      {/* --- ВЕРХНЯЯ ЧАСТЬ: Время, Маршрут и Статус --- */}
-      <Stack
-        direction={{ xs: "column", md: "row" }}
-        spacing={3}
-        alignItems={{ xs: "stretch", md: "center" }}
-        justifyContent="space-between"
-        sx={{ width: "100%" }}
-      >
+      {/* Декоративная полоса слева (желтый верх, черный низ) */}
+      <Box
+        sx={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: "6px",
+          background: "linear-gradient(to bottom, #F4C430 50%, #1a1a1a 50%)",
+        }}
+      />
+
+      <Stack spacing={2.5} sx={{ pl: 1 }}>
+        {/* ВЕРХНЯЯ ЧАСТЬ: Время, Маршрут, Статус */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={3}
-          alignItems={{ xs: "flex-start", md: "center" }}
-          flexGrow={1}
-          sx={{ minWidth: 0 }}
+          alignItems="center"
         >
-          {/* Время отправления */}
-          <Typography
-            variant="h3"
-            sx={{ fontWeight: 700, color: "text.primary", minWidth: "90px" }}
-          >
-            {departureTime}
-          </Typography>
+          {/* Блок времени */}
+          <Box sx={{ minWidth: "100px", textAlign: "center", mt: -1 }}>
+            <Typography
+              variant="h3"
+              sx={{ fontWeight: 800, color: "#1a1a1a", lineHeight: 1 }}
+            >
+              {departureTime}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                color: "#8c98a4",
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                mt: 0.5,
+                display: "block",
+              }}
+            >
+              Отправление
+            </Typography>
+          </Box>
 
-          {/* Центральный блок: Тип, Цена и МАРШРУТ */}
-          <Box sx={{ flexGrow: 1, width: "100%", overflow: "hidden" }}>
+          {/* Центральный блок: Тип, Цена и Stepper */}
+          <Box sx={{ flexGrow: 1, width: "100%" }}>
+            {/* Плашка маршрута и цена */}
             <Stack
               direction="row"
-              spacing={1}
+              spacing={2}
               alignItems="center"
-              sx={{ mb: 1.5 }}
+              sx={{ mb: 2, ml: 2 }}
             >
-              <RouteIcon sx={{ color: "text.secondary", fontSize: 18 }} />
-              <Typography
-                variant="body2"
-                sx={{ color: "text.secondary", fontWeight: 500 }}
-              >
-                {routeType}
-              </Typography>
-
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                •
-              </Typography>
-              <Typography
-                variant="body2"
+              <Box
                 sx={{
-                  fontWeight: 700,
-                  color: price === 0 ? "success.main" : "primary.main",
-                  textTransform: price === 0 ? "uppercase" : "none",
-                  letterSpacing: price === 0 ? "0.5px" : "normal",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  bgcolor: "#1a1a1a",
+                  color: "#fff",
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: "8px",
                 }}
+              >
+                <RouteIcon sx={{ color: "#F4C430", fontSize: 16 }} />
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, fontSize: "0.8rem" }}
+                >
+                  {routeType}
+                </Typography>
+              </Box>
+
+              <Typography
+                variant="body1"
+                sx={{ fontWeight: 800, color: "#1a1a1a" }}
               >
                 {price === 0 ? "Бесплатно" : `${price} ₽`}
               </Typography>
             </Stack>
 
-            {/* Визуализация маршрута */}
-            <Box
-              sx={{
-                width: "100%",
-                overflowX: "auto",
-                pb: 1,
-                "&::-webkit-scrollbar": { height: "4px" },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor: "rgba(0,0,0,0.1)",
-                  borderRadius: "4px",
-                },
-              }}
+            {/* Таймлайн (Stepper) */}
+            <Stepper
+              alternativeLabel
+              activeStep={-1}
+              connector={<CustomConnector />}
             >
-              <Stepper
-                alternativeLabel
-                activeStep={-1}
-                sx={{ minWidth: `${stops.length * 100}px` }}
-              >
-                {stops.map((stop, index) => (
-                  <Step key={index}>
-                    <StepLabel
-                      StepIconProps={{
-                        sx: {
-                          color: "divider",
-                          "&.Mui-active, &.Mui-completed": {
-                            color: statusColor,
-                          },
-                        },
+              {stops.map((stop, index) => (
+                <Step key={index}>
+                  <StepLabel StepIconComponent={CustomStepIcon}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 700,
+                        color: "#1a1a1a",
+                        display: "block",
+                        mt: -0.5,
                       }}
                     >
+                      {stop.location}
+                    </Typography>
+                    {stop.time && (
                       <Typography
                         variant="caption"
-                        sx={{
-                          display: "block",
-                          fontWeight: 600,
-                          color: "text.primary",
-                        }}
+                        sx={{ color: "#8c98a4", fontWeight: 600 }}
                       >
-                        {stop.location}
+                        {stop.time}
                       </Typography>
-                      {stop.time && (
-                        <Typography
-                          variant="caption"
-                          sx={{ color: "text.secondary" }}
-                        >
-                          {stop.time}
-                        </Typography>
-                      )}
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
+                    )}
+                  </StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box>
+
+          {/* Вертикальный разделитель */}
+          <Box
+            sx={{
+              display: { xs: "none", md: "block" },
+              height: "50px",
+              borderRight: "1px dashed #D1D5DB",
+            }}
+          />
+
+          {/* Статус */}
+          <Box sx={{ minWidth: "160px", textAlign: "center" }}>
+            <Box
+              sx={{
+                ...statusStyles,
+                px: 3,
+                py: 1,
+                borderRadius: "24px",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                display: "inline-block",
+                textTransform: "uppercase",
+              }}
+            >
+              {statusDisplay}
             </Box>
           </Box>
         </Stack>
 
-        {/* Статус */}
-        <Box sx={{ alignSelf: { xs: "flex-end", md: "center" } }}>
-          <Chip
-            label={status}
+        {/* НИЖНЯЯ ЧАСТЬ: Заметки (Опционально) */}
+        {notes && (
+          <Box
             sx={{
-              bgcolor: statusColor,
-              color: statusTextColor,
-              fontWeight: 700,
-              borderRadius: "8px",
-              px: 1,
-              height: "36px",
-            }}
-          />
-        </Box>
-      </Stack>
-
-      {/* --- НИЖНЯЯ ЧАСТЬ: Блок с важной информацией (Заметки) --- */}
-      {/* Рендерится только если есть notes */}
-      {notes && (
-        <Box
-          sx={{
-            mt: 2,
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor:
-              price === 0
-                ? "rgba(34, 197, 94, 0.08)"
-                : "rgba(244, 196, 48, 0.1)",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 1.5,
-          }}
-        >
-          <InfoOutlinedIcon
-            sx={{
-              color: price === 0 ? "success.main" : "primary.main",
-              fontSize: 20,
-              mt: 0.2,
-            }}
-          />
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.primary",
-              fontWeight: 500,
-              lineHeight: 1.4,
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              bgcolor: "#F9FAFB",
+              border: "1px solid #F3F4F6",
+              p: 2,
+              borderRadius: "20px",
             }}
           >
-            {notes}
-          </Typography>
-        </Box>
-      )}
+            <InfoOutlinedIcon sx={{ color: "#1a1a1a", fontSize: 20 }} />
+            <Typography
+              variant="body2"
+              sx={{ color: "#4B5563", fontWeight: 500 }}
+            >
+              {notes}
+            </Typography>
+          </Box>
+        )}
+      </Stack>
     </Card>
   );
 };
