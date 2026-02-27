@@ -1,4 +1,4 @@
-import type { FC, ElementType } from "react";
+import React from "react";
 import {
   Box,
   Card,
@@ -9,29 +9,13 @@ import {
   StepLabel,
   StepConnector,
   stepConnectorClasses,
+  useTheme,
+  styled,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 
-export type TripStatus = "SCHEDULED" | "ON THE WAY";
-
-export interface TripStop {
-  location: string;
-  time?: string;
-}
-
-export interface TripCardProps {
-  departureTime: string;
-  price: number;
-  routeType: string;
-  RouteIcon: ElementType;
-  status: TripStatus;
-  notes?: string;
-  stops: TripStop[];
-}
-
-const CustomConnector = styled(StepConnector)(({ theme }) => ({
+const CustomConnector = styled(StepConnector)(({ theme }: any) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: 12,
     left: "calc(-50% + 12px)",
@@ -39,7 +23,7 @@ const CustomConnector = styled(StepConnector)(({ theme }) => ({
   },
   [`& .${stepConnectorClasses.line}`]: {
     borderColor: theme.palette.divider,
-    borderTopWidth: 1,
+    borderTopWidth: 2,
   },
 }));
 
@@ -56,11 +40,11 @@ const CustomStepIcon = () => (
       zIndex: 1,
     }}
   >
-    <CheckIcon sx={{ color: "#fff", fontSize: 16, fontWeight: "bold" }} />
+    <CheckIcon sx={{ color: "#1a1a1a", fontSize: 16, fontWeight: "bold" }} />
   </Box>
 );
 
-export const TripCard: FC<TripCardProps> = ({
+export const TripCard = ({
   departureTime,
   price,
   routeType,
@@ -68,20 +52,21 @@ export const TripCard: FC<TripCardProps> = ({
   status,
   notes,
   stops,
-}) => {
+}: any) => {
   const isScheduled = status === "SCHEDULED";
-
   const statusDisplay = isScheduled ? "ПО РАСПИСАНИЮ" : "В ПУТИ";
+  const theme = useTheme();
+
   const statusStyles = isScheduled
     ? {
         border: "1px solid #F4C430",
         bgcolor: "transparent",
-        color: "#1a1a1a",
+        color: theme.palette.text.primary,
       }
     : {
-        border: "1px solid #E2E8F0",
-        bgcolor: "#F4F6F8",
-        color: "#1a1a1a",
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: theme.palette.mode === "dark" ? "#1E293B" : "#F4F6F8",
+        color: theme.palette.text.primary,
       };
 
   return (
@@ -92,16 +77,22 @@ export const TripCard: FC<TripCardProps> = ({
         display: "flex",
         flexDirection: "column",
         p: 3,
-        borderRadius: "32px", // Сильное скругление как в макете
-        border: "1px solid #E5E7EB",
-        overflow: "hidden", // Чтобы декоративная линия не вылезала за углы
-        boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+        borderRadius: "32px",
+        border: `1px solid ${theme.palette.divider}`,
+        overflow: "hidden",
+        bgcolor: "background.paper",
+        boxShadow:
+          theme.palette.mode === "dark"
+            ? "0 4px 20px rgba(0,0,0,0.2)"
+            : "0 4px 20px rgba(0,0,0,0.03)",
         "&:hover": {
-          boxShadow: "0 6px 24px rgba(0,0,0,0.06)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 6px 24px rgba(0,0,0,0.4)"
+              : "0 6px 24px rgba(0,0,0,0.06)",
         },
       }}
     >
-      {/* Декоративная полоса слева (желтый верх, черный низ) */}
       <Box
         sx={{
           position: "absolute",
@@ -112,19 +103,16 @@ export const TripCard: FC<TripCardProps> = ({
           background: "linear-gradient(to bottom, #F4C430 50%, #1a1a1a 50%)",
         }}
       />
-
       <Stack spacing={2.5} sx={{ pl: 1 }}>
-        {/* ВЕРХНЯЯ ЧАСТЬ: Время, Маршрут, Статус */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={3}
           alignItems="center"
         >
-          {/* Блок времени */}
           <Box sx={{ minWidth: "100px", textAlign: "center", mt: -1 }}>
             <Typography
               variant="h3"
-              sx={{ fontWeight: 800, color: "#1a1a1a", lineHeight: 1 }}
+              sx={{ fontWeight: 800, color: "text.primary", lineHeight: 1 }}
             >
               {departureTime}
             </Typography>
@@ -132,7 +120,7 @@ export const TripCard: FC<TripCardProps> = ({
               variant="caption"
               sx={{
                 fontWeight: 700,
-                color: "#8c98a4",
+                color: "text.secondary",
                 letterSpacing: "1px",
                 textTransform: "uppercase",
                 mt: 0.5,
@@ -142,10 +130,7 @@ export const TripCard: FC<TripCardProps> = ({
               Отправление
             </Typography>
           </Box>
-
-          {/* Центральный блок: Тип, Цена и Stepper */}
           <Box sx={{ flexGrow: 1, width: "100%" }}>
-            {/* Плашка маршрута и цена */}
             <Stack
               direction="row"
               spacing={2}
@@ -172,29 +157,26 @@ export const TripCard: FC<TripCardProps> = ({
                   {routeType}
                 </Typography>
               </Box>
-
               <Typography
                 variant="body1"
-                sx={{ fontWeight: 800, color: "#1a1a1a" }}
+                sx={{ fontWeight: 800, color: "text.primary" }}
               >
                 {price === 0 ? "Бесплатно" : `${price} ₽`}
               </Typography>
             </Stack>
-
-            {/* Таймлайн (Stepper) */}
             <Stepper
               alternativeLabel
               activeStep={-1}
               connector={<CustomConnector />}
             >
-              {stops.map((stop, index) => (
+              {stops.map((stop: any, index: number) => (
                 <Step key={index}>
                   <StepLabel StepIconComponent={CustomStepIcon}>
                     <Typography
                       variant="body2"
                       sx={{
                         fontWeight: 700,
-                        color: "#1a1a1a",
+                        color: "text.primary",
                         display: "block",
                         mt: -0.5,
                       }}
@@ -204,7 +186,7 @@ export const TripCard: FC<TripCardProps> = ({
                     {stop.time && (
                       <Typography
                         variant="caption"
-                        sx={{ color: "#8c98a4", fontWeight: 600 }}
+                        sx={{ color: "text.secondary", fontWeight: 600 }}
                       >
                         {stop.time}
                       </Typography>
@@ -214,17 +196,13 @@ export const TripCard: FC<TripCardProps> = ({
               ))}
             </Stepper>
           </Box>
-
-          {/* Вертикальный разделитель */}
           <Box
             sx={{
               display: { xs: "none", md: "block" },
               height: "50px",
-              borderRight: "1px dashed #D1D5DB",
+              borderRight: `1px dashed ${theme.palette.divider}`,
             }}
           />
-
-          {/* Статус */}
           <Box sx={{ minWidth: "160px", textAlign: "center" }}>
             <Box
               sx={{
@@ -242,24 +220,22 @@ export const TripCard: FC<TripCardProps> = ({
             </Box>
           </Box>
         </Stack>
-
-        {/* НИЖНЯЯ ЧАСТЬ: Заметки (Опционально) */}
         {notes && (
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               gap: 1.5,
-              bgcolor: "#F9FAFB",
-              border: "1px solid #F3F4F6",
+              bgcolor: theme.palette.mode === "dark" ? "#08090C" : "#F9FAFB",
+              border: `1px solid ${theme.palette.divider}`,
               p: 2,
               borderRadius: "20px",
             }}
           >
-            <InfoOutlinedIcon sx={{ color: "#1a1a1a", fontSize: 20 }} />
+            <InfoOutlinedIcon sx={{ color: "text.primary", fontSize: 20 }} />
             <Typography
               variant="body2"
-              sx={{ color: "#4B5563", fontWeight: 500 }}
+              sx={{ color: "text.secondary", fontWeight: 500 }}
             >
               {notes}
             </Typography>
