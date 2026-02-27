@@ -1,36 +1,26 @@
-import { useState, type FC, type ReactNode } from "react";
+import React, { useState } from "react";
 import {
+  Box,
   Card,
   CardContent,
-  Box,
   Typography,
   Collapse,
   Button as MuiButton,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
-interface ServiceCardProps {
-  title: string;
-  subtitle: string;
-  description: string;
-  icon: ReactNode;
-  isActive?: boolean;
-}
-
-export const ServiceCard: FC<ServiceCardProps> = ({
+export const ServiceCard = ({
   title,
   subtitle,
   description,
   icon,
   isActive,
-}) => {
+}: any) => {
   const [expanded, setExpanded] = useState(false);
-
-  const handleExpandClick = () => {
-    setExpanded(!expanded);
-  };
-
-  const contentStyles = { flexGrow: 1, textAlign: "center", p: 3 };
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
   const IconWrapper = () => (
     <Box
@@ -50,12 +40,10 @@ export const ServiceCard: FC<ServiceCardProps> = ({
           justifyContent: "center",
           alignItems: "center",
           color: "#333",
-          borderRadius: "50%", // Сделали круглым
-          boxShadow: "0px 8px 16px rgba(255, 193, 7, 0.25)",
+          borderRadius: "50%",
+          boxShadow: isDark ? "none" : "0px 8px 16px rgba(255, 193, 7, 0.25)",
           transition: "transform 0.3s ease",
-          "&:hover": {
-            transform: "scale(1.05)",
-          },
+          "&:hover": { transform: "scale(1.05)" },
         }}
       >
         {icon}
@@ -65,7 +53,6 @@ export const ServiceCard: FC<ServiceCardProps> = ({
 
   return (
     <Box sx={{ position: "relative" }}>
-      {/* Скрытая карточка-плейсхолдер (держит высоту в сетке) */}
       <Card
         variant="outlined"
         sx={{
@@ -74,11 +61,11 @@ export const ServiceCard: FC<ServiceCardProps> = ({
           opacity: 0,
           display: "flex",
           flexDirection: "column",
-          borderRadius: 3, // Чуть более мягкие углы
+          borderRadius: 3,
           borderWidth: isActive ? 2 : 1,
         }}
       >
-        <CardContent sx={contentStyles}>
+        <CardContent sx={{ flexGrow: 1, textAlign: "center", p: 3 }}>
           <IconWrapper />
           <Typography
             variant="h6"
@@ -97,7 +84,6 @@ export const ServiceCard: FC<ServiceCardProps> = ({
         </CardContent>
       </Card>
 
-      {/* Видимая интерактивная карточка */}
       <Card
         variant="outlined"
         sx={{
@@ -108,34 +94,40 @@ export const ServiceCard: FC<ServiceCardProps> = ({
           height: expanded ? "auto" : "100%",
           display: "flex",
           flexDirection: "column",
-          borderRadius: 3, // Мягкие углы
+          borderRadius: 3,
           borderColor: isActive ? "#FFC107" : "divider",
           borderWidth: isActive ? 2 : 1,
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", // Более плавная анимация (MUI standard)
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           zIndex: expanded ? 10 : 1,
           bgcolor: "background.paper",
-          boxShadow: expanded ? "0px 12px 24px rgba(0, 0, 0, 0.1)" : 0,
+          boxShadow: expanded
+            ? isDark
+              ? "0px 12px 24px rgba(0, 0, 0, 0.5)"
+              : "0px 12px 24px rgba(0, 0, 0, 0.1)"
+            : 0,
           "&:hover": {
             boxShadow: expanded
-              ? "0px 12px 24px rgba(0, 0, 0, 0.1)"
-              : "0px 6px 16px rgba(0, 0, 0, 0.06)",
+              ? isDark
+                ? "0px 12px 24px rgba(0, 0, 0, 0.5)"
+                : "0px 12px 24px rgba(0, 0, 0, 0.1)"
+              : isDark
+                ? "0px 6px 16px rgba(0, 0, 0, 0.2)"
+                : "0px 6px 16px rgba(0, 0, 0, 0.06)",
             borderColor: "#FFC107",
-            transform: expanded ? "none" : "translateY(-4px)", // Легкое поднятие при наведении
+            transform: expanded ? "none" : "translateY(-4px)",
           },
         }}
       >
-        <CardContent sx={contentStyles}>
+        <CardContent sx={{ flexGrow: 1, textAlign: "center", p: 3 }}>
           <IconWrapper />
-
           <Typography
             variant="h6"
             component="h3"
             gutterBottom
-            sx={{ fontWeight: 700, color: "#222" }}
+            sx={{ fontWeight: 700, color: "text.primary" }}
           >
             {title}
           </Typography>
-
           <Typography
             variant="body2"
             color="text.secondary"
@@ -143,29 +135,18 @@ export const ServiceCard: FC<ServiceCardProps> = ({
           >
             {subtitle}
           </Typography>
-
           <Collapse in={expanded} timeout="auto" unmountOnExit>
             <Typography
               variant="body2"
               color="text.primary"
-              sx={{
-                mt: 2,
-                mb: 2,
-                textAlign: "left",
-                lineHeight: 1.6,
-                color: "#555",
-              }}
+              sx={{ mt: 2, mb: 2, textAlign: "left", lineHeight: 1.6 }}
             >
               {description}
             </Typography>
           </Collapse>
-
-          {/* Обновленная кнопка с иконкой */}
           <Box sx={{ mt: "auto", pt: 1 }}>
-            {" "}
-            {/* Выталкиваем кнопку вниз */}
             <MuiButton
-              onClick={handleExpandClick}
+              onClick={() => setExpanded(!expanded)}
               endIcon={
                 <KeyboardArrowDownIcon
                   sx={{
@@ -175,18 +156,17 @@ export const ServiceCard: FC<ServiceCardProps> = ({
                 />
               }
               sx={{
-                color: "#333",
-                bgcolor: "rgba(255, 193, 7, 0.1)",
+                color: isDark ? "#fff" : "#333",
+                bgcolor: isDark
+                  ? "rgba(255, 193, 7, 0.15)"
+                  : "rgba(255, 193, 7, 0.1)",
                 textTransform: "none",
                 fontWeight: 600,
                 borderRadius: 2,
                 px: 3,
                 py: 1,
                 transition: "all 0.2s ease",
-                "&:hover": {
-                  bgcolor: "#FFC107",
-                  color: "#000",
-                },
+                "&:hover": { bgcolor: "#FFC107", color: "#000" },
               }}
             >
               {expanded ? "Свернуть" : "Узнать больше"}

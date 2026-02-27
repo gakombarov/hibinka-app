@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ThemeProvider } from "@mui/material/styles";
+import React, { useState, useMemo } from "react";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 import {
   CssBaseline,
   Box,
@@ -9,12 +9,17 @@ import {
   Grid,
   Card,
   InputAdornment,
+  IconButton,
+  Tooltip,
+  alpha,
 } from "@mui/material";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 
-import { theme } from "./theme";
+import { getDesignTokens } from "./theme";
 import { Button } from "./Button";
 import { InputField } from "./InputField";
 import { ServiceCard } from "./ServiceCard";
@@ -25,30 +30,74 @@ import { Modal } from "./Modal";
 
 export default function App() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [mode, setMode] = useState<"light" | "dark">("light");
+
+  const toggleTheme = () =>
+    setMode((prev) => (prev === "light" ? "dark" : "light"));
+  const theme = useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ minHeight: "100vh", pb: 8, pt: 4 }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          pb: 8,
+          pt: 4,
+          transition: "background-color 0.3s ease",
+        }}
+      >
         <Container maxWidth="xl">
           <Stack spacing={8}>
-            {/* ШАПКА UI KIT */}
-            <Box sx={{ textAlign: "center", mb: 2 }}>
-              <Typography
-                variant="h3"
-                fontWeight="900"
-                color="#1a1a1a"
-                gutterBottom
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h3"
+                  fontWeight="900"
+                  color="text.primary"
+                  gutterBottom
+                >
+                  Hibinka51 <span style={{ color: "#F4C430" }}>UI Kit</span>
+                </Typography>
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  fontWeight="400"
+                >
+                  Единый файл песочницы для предпросмотра
+                </Typography>
+              </Box>
+
+              <Tooltip
+                title={`Включить ${mode === "dark" ? "светлую" : "темную"} тему`}
               >
-                Hibinka51 <span style={{ color: "#F4C430" }}>UI Kit</span>
-              </Typography>
-              <Typography variant="h6" color="text.secondary" fontWeight="400">
-                Единый файл песочницы для предпросмотра
-              </Typography>
+                <IconButton
+                  onClick={toggleTheme}
+                  sx={{
+                    color: "text.secondary",
+                    bgcolor: alpha(theme.palette.text.primary, 0.05),
+                  }}
+                >
+                  {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+                </IconButton>
+              </Tooltip>
             </Box>
 
-            {/* СЕКЦИЯ: Базовые элементы */}
             <Box>
-              <Typography variant="h5" fontWeight="800" sx={{ mb: 3 }}>
+              <Typography
+                variant="h5"
+                fontWeight="800"
+                color="text.primary"
+                sx={{ mb: 3 }}
+              >
                 1. Базовые элементы
               </Typography>
               <Grid container spacing={4}>
@@ -58,7 +107,12 @@ export default function App() {
                     elevation={0}
                     variant="outlined"
                   >
-                    <Typography variant="h6" fontWeight="700" mb={3}>
+                    <Typography
+                      variant="h6"
+                      fontWeight="700"
+                      color="text.primary"
+                      mb={3}
+                    >
                       Кнопки
                     </Typography>
                     <Stack
@@ -82,7 +136,12 @@ export default function App() {
                     elevation={0}
                     variant="outlined"
                   >
-                    <Typography variant="h6" fontWeight="700" mb={3}>
+                    <Typography
+                      variant="h6"
+                      fontWeight="700"
+                      color="text.primary"
+                      mb={3}
+                    >
                       Поля ввода
                     </Typography>
                     <Stack spacing={2}>
@@ -93,7 +152,9 @@ export default function App() {
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
-                              <PhoneOutlinedIcon sx={{ color: "#9CA3AF" }} />
+                              <PhoneOutlinedIcon
+                                sx={{ color: "text.secondary" }}
+                              />
                             </InputAdornment>
                           ),
                         }}
@@ -110,13 +171,16 @@ export default function App() {
               </Grid>
             </Box>
 
-            {/* СЕКЦИЯ: Публичные карточки (Лэндинг) */}
             <Box>
-              <Typography variant="h5" fontWeight="800" sx={{ mb: 3 }}>
+              <Typography
+                variant="h5"
+                fontWeight="800"
+                color="text.primary"
+                sx={{ mb: 3 }}
+              >
                 2. Лэндинг (Публичная часть)
               </Typography>
               <Box sx={{ mb: 4 }}>
-                {/* Добавляем alignItems="flex-start", чтобы соседние карточки не тянулись в высоту */}
                 <Grid container spacing={2} alignItems="flex-start">
                   {servicesData.map((s, i) => (
                     <Grid item xs={12} sm={6} md={3} lg={3} xl={3} key={i}>
@@ -155,13 +219,18 @@ export default function App() {
               </Stack>
             </Box>
 
-            {/* СЕКЦИЯ: Админка (Дашборд) */}
             <Box>
-              <Typography variant="h5" fontWeight="800" sx={{ mb: 3 }}>
+              <Typography
+                variant="h5"
+                fontWeight="800"
+                color="text.primary"
+                sx={{ mb: 3 }}
+              >
                 3. Дашборд (Журнал)
               </Typography>
               <Stack spacing={2}>
                 <AdminTripCard
+                  id="1"
                   tripDate="24 Октября 2024"
                   departureTime="07:00"
                   departureLocation="Мончегорск"
@@ -176,6 +245,7 @@ export default function App() {
                   customerName="ООО 'Норникель'"
                 />
                 <AdminTripCard
+                  id="2"
                   tripDate="25 Октября 2024"
                   departureTime="08:30"
                   departureLocation="Апатиты"
@@ -193,16 +263,20 @@ export default function App() {
             </Box>
 
             <Box>
-              <Typography variant="h5" fontWeight="800" sx={{ mb: 3 }}>
+              <Typography
+                variant="h5"
+                fontWeight="800"
+                color="text.primary"
+                sx={{ mb: 3 }}
+              >
                 4. Универсальное Модальное Окно
               </Typography>
-
               <Card
                 sx={{
                   p: 4,
                   borderRadius: "32px",
                   textAlign: "center",
-                  bgcolor: "#1a1a1a",
+                  bgcolor: mode === "dark" ? "background.paper" : "#1a1a1a",
                   color: "#fff",
                 }}
                 elevation={0}
@@ -211,8 +285,7 @@ export default function App() {
                   Тест Модального Окна
                 </Typography>
                 <Typography variant="body1" mb={4} color="#9CA3AF">
-                  Нажмите на кнопку, чтобы открыть пустую модалку. В неё можно
-                  будет передать любую форму.
+                  Нажмите на кнопку, чтобы открыть пустую модалку.
                 </Typography>
                 <Button
                   size="large"
@@ -223,7 +296,6 @@ export default function App() {
                 </Button>
               </Card>
 
-              {/* Универсальное модальное окно без привязки к конкретной форме */}
               <Modal
                 open={isBookingModalOpen}
                 onClose={() => setIsBookingModalOpen(false)}

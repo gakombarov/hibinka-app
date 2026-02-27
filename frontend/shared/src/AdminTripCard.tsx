@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import React from "react";
 import {
   Box,
   Card,
@@ -11,36 +11,16 @@ import {
   StepConnector,
   stepConnectorClasses,
   Divider,
+  useTheme,
+  styled,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
-
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import DirectionsCarOutlinedIcon from "@mui/icons-material/DirectionsCarOutlined";
 import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
 
-export type TripStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-export type PaymentStatus = "PENDING" | "PAID";
-
-export interface AdminTripCardProps {
-  id: string;
-  tripDate: string;
-  departureTime: string;
-  departureLocation: string;
-  arrivalLocation: string;
-  status: TripStatus;
-  paymentStatus: PaymentStatus;
-  plannedAmount: number;
-  actualAmount: number | null;
-  isRegular: boolean;
-  notes?: string;
-  driverName?: string;
-  vehicleName?: string;
-  customerName?: string;
-}
-
-const CustomConnector = styled(StepConnector)(({ theme }) => ({
+const CustomConnector = styled(StepConnector)(({ theme }: any) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: 12,
     left: "calc(-50% + 12px)",
@@ -52,7 +32,7 @@ const CustomConnector = styled(StepConnector)(({ theme }) => ({
   },
 }));
 
-const CustomStepIcon = () => (
+const AdminStepIcon = () => (
   <Box
     sx={{
       width: 24,
@@ -69,39 +49,58 @@ const CustomStepIcon = () => (
   </Box>
 );
 
-const getPaymentStyles = (status: PaymentStatus) => {
-  if (status === "PAID") {
+const getPaymentStyles = (status: string, isDark: boolean) => {
+  if (status === "PAID")
     return {
-      bg: "#ECFDF5",
-      color: "#059669",
-      border: "#A7F3D0",
+      bg: isDark ? "rgba(5, 150, 105, 0.2)" : "#ECFDF5",
+      color: isDark ? "#34D399" : "#059669",
+      border: isDark ? "#059669" : "#A7F3D0",
       label: "Оплачено",
     };
-  }
   return {
-    bg: "#FFFBEB",
-    color: "#D97706",
-    border: "#FDE68A",
+    bg: isDark ? "rgba(217, 119, 6, 0.2)" : "#FFFBEB",
+    color: isDark ? "#FBBF24" : "#D97706",
+    border: isDark ? "#D97706" : "#FDE68A",
     label: "Ожидает оплаты",
   };
 };
 
-const getTripStyles = (status: TripStatus) => {
+const getTripStyles = (status: string, isDark: boolean) => {
   switch (status) {
     case "PLANNED":
-      return { bg: "#F3F4F6", color: "#4B5563", label: "Запланирован" };
+      return {
+        bg: isDark ? "#1E293B" : "#F3F4F6",
+        color: isDark ? "#94A3B8" : "#4B5563",
+        label: "Запланирован",
+      };
     case "IN_PROGRESS":
-      return { bg: "#FEF08A", color: "#854D0E", label: "В пути" };
+      return {
+        bg: isDark ? "rgba(253, 230, 138, 0.2)" : "#FEF08A",
+        color: isDark ? "#FDE047" : "#854D0E",
+        label: "В пути",
+      };
     case "COMPLETED":
-      return { bg: "#ECFDF5", color: "#059669", label: "Завершен" };
+      return {
+        bg: isDark ? "rgba(5, 150, 105, 0.2)" : "#ECFDF5",
+        color: isDark ? "#34D399" : "#059669",
+        label: "Завершен",
+      };
     case "CANCELLED":
-      return { bg: "#FEF2F2", color: "#DC2626", label: "Отменен" };
+      return {
+        bg: isDark ? "rgba(220, 38, 38, 0.2)" : "#FEF2F2",
+        color: isDark ? "#F87171" : "#DC2626",
+        label: "Отменен",
+      };
     default:
-      return { bg: "#F3F4F6", color: "#4B5563", label: "Неизвестно" };
+      return {
+        bg: isDark ? "#1E293B" : "#F3F4F6",
+        color: isDark ? "#94A3B8" : "#4B5563",
+        label: "Неизвестно",
+      };
   }
 };
 
-export const AdminTripCard: FC<AdminTripCardProps> = ({
+export const AdminTripCard = ({
   tripDate,
   departureTime,
   departureLocation,
@@ -115,9 +114,11 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
   driverName = "Не назначен",
   vehicleName = "Не назначена",
   customerName = "Не указан",
-}) => {
-  const payStyles = getPaymentStyles(paymentStatus);
-  const tripStyles = getTripStyles(status);
+}: any) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const payStyles = getPaymentStyles(paymentStatus, isDark);
+  const tripStyles = getTripStyles(status, isDark);
 
   return (
     <Card
@@ -126,24 +127,29 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
         display: "flex",
         flexDirection: "column",
         p: 3,
-        borderRadius: "32px", // То же скругление, что и в TripCard
-        border: "1px solid #E5E7EB",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-        "&:hover": { boxShadow: "0 6px 24px rgba(0,0,0,0.06)" },
+        borderRadius: "32px",
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: "background.paper",
+        boxShadow: isDark
+          ? "0 4px 20px rgba(0,0,0,0.2)"
+          : "0 4px 20px rgba(0,0,0,0.02)",
+        "&:hover": {
+          boxShadow: isDark
+            ? "0 6px 24px rgba(0,0,0,0.4)"
+            : "0 6px 24px rgba(0,0,0,0.06)",
+        },
       }}
     >
       <Stack spacing={3}>
-        {/* ВЕРХНИЙ БЛОК: Основная информация */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={3}
           alignItems="center"
         >
-          {/* Время и дата (Слева) */}
           <Box sx={{ minWidth: "120px", textAlign: "center" }}>
             <Typography
               variant="h3"
-              sx={{ fontWeight: 800, color: "#1a1a1a", lineHeight: 1 }}
+              sx={{ fontWeight: 800, color: "text.primary", lineHeight: 1 }}
             >
               {departureTime}
             </Typography>
@@ -151,7 +157,7 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
               variant="caption"
               sx={{
                 fontWeight: 700,
-                color: "#8c98a4",
+                color: "text.secondary",
                 textTransform: "uppercase",
                 mt: 0.5,
                 display: "block",
@@ -160,8 +166,6 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
               {tripDate}
             </Typography>
           </Box>
-
-          {/* Маршрут (По центру) */}
           <Box sx={{ flexGrow: 1, width: "100%", px: { xs: 0, md: 4 } }}>
             <Box
               sx={{
@@ -188,7 +192,6 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
                   </Box>
                 )}
               </Box>
-              {/* Бейджик статуса поездки */}
               <Box
                 sx={{
                   bgcolor: tripStyles.bg,
@@ -203,27 +206,26 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
                 {tripStyles.label}
               </Box>
             </Box>
-
             <Stepper
               alternativeLabel
               activeStep={-1}
               connector={<CustomConnector />}
             >
               <Step>
-                <StepLabel StepIconComponent={CustomStepIcon}>
+                <StepLabel StepIconComponent={AdminStepIcon}>
                   <Typography
                     variant="body2"
-                    sx={{ fontWeight: 700, color: "#1a1a1a" }}
+                    sx={{ fontWeight: 700, color: "text.primary" }}
                   >
                     {departureLocation}
                   </Typography>
                 </StepLabel>
               </Step>
               <Step>
-                <StepLabel StepIconComponent={CustomStepIcon}>
+                <StepLabel StepIconComponent={AdminStepIcon}>
                   <Typography
                     variant="body2"
-                    sx={{ fontWeight: 700, color: "#1a1a1a" }}
+                    sx={{ fontWeight: 700, color: "text.primary" }}
                   >
                     {arrivalLocation}
                   </Typography>
@@ -231,20 +233,15 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
               </Step>
             </Stepper>
           </Box>
-
-          {/* Вертикальный разделитель */}
           <Box
             sx={{
               display: { xs: "none", md: "block" },
               height: "60px",
-              borderRight: "1px dashed #D1D5DB",
+              borderRight: `1px dashed ${theme.palette.divider}`,
             }}
           />
-
-          {/* Финансы и Управление (Справа) */}
           <Box sx={{ minWidth: "180px", textAlign: "right" }}>
             <Stack spacing={1} alignItems="flex-end">
-              {/* Цветовой маркер оплаты */}
               <Box
                 sx={{
                   border: `1px solid ${payStyles.border}`,
@@ -259,12 +256,11 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
               >
                 {payStyles.label}
               </Box>
-
               <Box>
                 <Typography
                   variant="body2"
                   sx={{
-                    color: "#8c98a4",
+                    color: "text.secondary",
                     fontWeight: 600,
                     display: "inline-block",
                     mr: 1,
@@ -276,14 +272,13 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
                   variant="h6"
                   sx={{
                     fontWeight: 800,
-                    color: "#1a1a1a",
+                    color: "text.primary",
                     display: "inline-block",
                   }}
                 >
                   Факт: {actualAmount !== null ? actualAmount : 0} ₽
                 </Typography>
               </Box>
-
               <Button
                 variant="contained"
                 disableElevation
@@ -300,10 +295,9 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
             </Stack>
           </Box>
         </Stack>
-
-        <Divider sx={{ borderStyle: "dashed", borderColor: "#E5E7EB" }} />
-
-        {/* НИЖНИЙ БЛОК: Операционные детали и Заметки */}
+        <Divider
+          sx={{ borderStyle: "dashed", borderColor: theme.palette.divider }}
+        />
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={3}
@@ -312,72 +306,82 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
         >
           <Stack direction="row" spacing={4} flexWrap="wrap" useFlexGap>
             <Stack direction="row" spacing={1} alignItems="center">
-              <PersonOutlineIcon sx={{ color: "#8c98a4", fontSize: 20 }} />
+              <PersonOutlineIcon
+                sx={{ color: "text.secondary", fontSize: 20 }}
+              />
               <Box>
                 <Typography
                   variant="caption"
-                  sx={{ color: "#8c98a4", display: "block", lineHeight: 1 }}
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    lineHeight: 1,
+                  }}
                 >
                   Водитель
                 </Typography>
                 <Typography
                   variant="body2"
-                  sx={{ fontWeight: 600, color: "#1a1a1a" }}
+                  sx={{ fontWeight: 600, color: "text.primary" }}
                 >
                   {driverName}
                 </Typography>
               </Box>
             </Stack>
-
             <Stack direction="row" spacing={1} alignItems="center">
               <DirectionsCarOutlinedIcon
-                sx={{ color: "#8c98a4", fontSize: 20 }}
+                sx={{ color: "text.secondary", fontSize: 20 }}
               />
               <Box>
                 <Typography
                   variant="caption"
-                  sx={{ color: "#8c98a4", display: "block", lineHeight: 1 }}
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    lineHeight: 1,
+                  }}
                 >
                   Транспорт
                 </Typography>
                 <Typography
                   variant="body2"
-                  sx={{ fontWeight: 600, color: "#1a1a1a" }}
+                  sx={{ fontWeight: 600, color: "text.primary" }}
                 >
                   {vehicleName}
                 </Typography>
               </Box>
             </Stack>
-
             <Stack direction="row" spacing={1} alignItems="center">
               <AccountBalanceWalletOutlinedIcon
-                sx={{ color: "#8c98a4", fontSize: 20 }}
+                sx={{ color: "text.secondary", fontSize: 20 }}
               />
               <Box>
                 <Typography
                   variant="caption"
-                  sx={{ color: "#8c98a4", display: "block", lineHeight: 1 }}
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    lineHeight: 1,
+                  }}
                 >
                   Заказчик
                 </Typography>
                 <Typography
                   variant="body2"
-                  sx={{ fontWeight: 600, color: "#1a1a1a" }}
+                  sx={{ fontWeight: 600, color: "text.primary" }}
                 >
                   {customerName}
                 </Typography>
               </Box>
             </Stack>
           </Stack>
-
-          {/* Заметки, если есть */}
           {notes && (
             <Box
               sx={{
                 display: "flex",
                 alignItems: "center",
                 gap: 1,
-                bgcolor: "#F9FAFB",
+                bgcolor: isDark ? "#08090C" : "#F9FAFB",
                 px: 2,
                 py: 1,
                 borderRadius: "12px",
@@ -387,7 +391,7 @@ export const AdminTripCard: FC<AdminTripCardProps> = ({
               <InfoOutlinedIcon sx={{ color: "#F4C430", fontSize: 18 }} />
               <Typography
                 variant="caption"
-                sx={{ color: "#4B5563", fontWeight: 500 }}
+                sx={{ color: "text.secondary", fontWeight: 500 }}
               >
                 {notes}
               </Typography>

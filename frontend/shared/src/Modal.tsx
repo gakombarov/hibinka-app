@@ -1,15 +1,16 @@
-import { Dialog, DialogTitle, DialogContent, IconButton } from "@mui/material";
+import React from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  useTheme,
+  alpha,
+} from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import type { ReactNode } from "react";
 
-interface ModalProps {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  children: ReactNode; // Это свойство позволяет передавать внутрь любую форму!
-}
-
-export const Modal = ({ open, onClose, title, children }: ModalProps) => {
+export const Modal = ({ open, onClose, title, children }: any) => {
+  const theme = useTheme();
   return (
     <Dialog
       open={open}
@@ -20,7 +21,11 @@ export const Modal = ({ open, onClose, title, children }: ModalProps) => {
         sx: {
           borderRadius: "24px",
           p: { xs: 1, md: 2 },
-          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+          bgcolor: "background.paper",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 20px 40px rgba(0,0,0,0.5)"
+              : "0 20px 40px rgba(0,0,0,0.1)",
         },
       }}
     >
@@ -28,7 +33,7 @@ export const Modal = ({ open, onClose, title, children }: ModalProps) => {
         sx={{
           fontWeight: 800,
           fontSize: "1.5rem",
-          color: "#1a1a1a",
+          color: "text.primary",
           pb: 1,
           pr: 6,
         }}
@@ -41,16 +46,16 @@ export const Modal = ({ open, onClose, title, children }: ModalProps) => {
           position: "absolute",
           right: 16,
           top: 16,
-          color: "#9CA3AF",
-          "&:hover": { color: "#1a1a1a", bgcolor: "#F3F4F6" },
+          color: "text.secondary",
+          "&:hover": {
+            color: "text.primary",
+            bgcolor: alpha(theme.palette.text.primary, 0.05),
+          },
         }}
       >
         <CloseIcon />
       </IconButton>
-      <DialogContent>
-        {/* Здесь будет рендериться то, что мы передадим внутрь */}
-        {children}
-      </DialogContent>
+      <DialogContent>{children}</DialogContent>
     </Dialog>
   );
 };
