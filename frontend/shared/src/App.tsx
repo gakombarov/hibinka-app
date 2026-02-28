@@ -19,14 +19,14 @@ import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 
-import { getDesignTokens } from "./theme";
-import { Button } from "./Button";
-import { InputField } from "./InputField";
-import { ServiceCard } from "./ServiceCard";
-import { services as servicesData } from "./services";
-import { TripCard } from "./TripCard";
-import { AdminTripCard } from "./AdminTripCard";
-import { Modal } from "./Modal";
+import { getDesignTokens } from "@shared/theme/theme";
+import { Button } from "@shared/components/ui/Button";
+import { InputField } from "@shared/components/ui/InputField";
+import { ServiceCard } from "@shared/components/cards/ServiceCard";
+import { services as servicesData } from "@shared/services";
+import { TripCard } from "@shared/components/cards/TripCard";
+import { AdminTripCard } from "@shared/components/cards/AdminTripCard";
+import { Modal } from "@shared/components/ui/Modal";
 
 export default function App() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);

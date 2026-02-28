@@ -8,8 +8,8 @@ import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 
 // Импортируем из твоего UI Kit
-import { InputField } from "./InputField";
-import { Button } from "./Button";
+import { InputField } from "../InputField";
+import { Button } from "../Button";
 
 interface BookingFormProps {
   isModal?: boolean;
