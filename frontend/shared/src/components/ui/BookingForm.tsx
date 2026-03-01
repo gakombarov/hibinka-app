@@ -2,12 +2,14 @@ import React from "react";
 import { Box, Grid, InputAdornment } from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LocationOn from "@mui/icons-material/LocationOn";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
+import LuggageOutlinedIcon from "@mui/icons-material/LuggageOutlined";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
-// Импортируем из твоего UI Kit
 import { InputField } from "./InputField";
 import { Button } from "./Button";
 
@@ -18,9 +20,11 @@ interface BookingFormProps {
 export const BookingForm: React.FC<BookingFormProps> = ({
   isModal = false,
 }) => (
-  <Box>
+  <Box component="form">
     <Grid container spacing={2.5}>
-      <Grid item xs={12} md={isModal ? 12 : 6}>
+      {" "}
+      <Grid size={{ xs: 12, md: isModal ? 12 : 6 }}>
+        {" "}
         <InputField
           fullWidth
           label="Ваше имя *"
@@ -34,7 +38,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={12} md={isModal ? 12 : 6}>
+      <Grid size={{ xs: 12, md: isModal ? 12 : 6 }}>
+        {" "}
         <InputField
           fullWidth
           label="Телефон *"
@@ -48,7 +53,23 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12 }}>
+        {" "}
+        <InputField
+          fullWidth
+          label="Email"
+          placeholder="example@mail.ru"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailOutlinedIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        {" "}
         <InputField
           fullWidth
           label="Откуда"
@@ -62,7 +83,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
+        {" "}
         <InputField
           fullWidth
           label="Куда"
@@ -76,7 +98,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={6} md={4}>
+      <Grid size={{ xs: 6, md: 4 }}>
+        {" "}
         <InputField
           fullWidth
           label="Дата"
@@ -91,7 +114,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={6} md={4}>
+      <Grid size={{ xs: 6, md: 4 }}>
+        {" "}
         <InputField
           fullWidth
           label="Время"
@@ -106,7 +130,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid size={{ xs: 12, md: 4 }}>
+        {" "}
         <InputField
           fullWidth
           label="Пассажиров"
@@ -121,7 +146,43 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           }}
         />
       </Grid>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
+        {" "}
+        <InputField
+          fullWidth
+          label="Багаж"
+          placeholder="Чемоданы, сумки, лыжи, сноуборд..."
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LuggageOutlinedIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      <Grid size={{ xs: 12 }}>
+        {" "}
+        <InputField
+          fullWidth
+          label="Комментарий"
+          placeholder="Детское кресло, особые пожелания..."
+          multiline
+          rows={2}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment
+                position="start"
+                sx={{ alignSelf: "flex-start", mt: 1.5 }}
+              >
+                <ChatBubbleOutlineIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Grid>
+      <Grid size={{ xs: 12 }}>
+        {" "}
         <Button
           variant="contained"
           color="primary"
