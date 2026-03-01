@@ -101,7 +101,8 @@ export default function App() {
                 1. Базовые элементы
               </Typography>
               <Grid container spacing={4}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  {" "}
                   <Card
                     sx={{ p: 4, borderRadius: "24px", height: "100%" }}
                     elevation={0}
@@ -130,7 +131,8 @@ export default function App() {
                     </Stack>
                   </Card>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  {" "}
                   <Card
                     sx={{ p: 4, borderRadius: "24px" }}
                     elevation={0}
@@ -183,7 +185,7 @@ export default function App() {
               <Box sx={{ mb: 4 }}>
                 <Grid container spacing={2} alignItems="flex-start">
                   {servicesData.map((s, i) => (
-                    <Grid item xs={12} sm={6} md={3} lg={3} xl={3} key={i}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3, xl: 3 }} key={i}>
                       <ServiceCard {...s} />
                     </Grid>
                   ))}

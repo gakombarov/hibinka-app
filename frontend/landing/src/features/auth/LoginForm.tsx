@@ -46,6 +46,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           ),
         }}
       />
+      <Button
+        size="large"
+        onClick={onLogin}
+        sx={{
+          mt: 2,
+          py: 1.5,
+          fontSize: "1.1rem",
+          width: "100%",
+          color: "#1a1a1a",
+        }}
+      >
+        Войти в систему
+      </Button>
     </Stack>
   );
 };

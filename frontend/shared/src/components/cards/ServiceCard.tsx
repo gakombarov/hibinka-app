@@ -11,14 +11,18 @@ import {
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
-export const ServiceCard = ({ title, subtitle, description, icon }: any) => {
+export const ServiceCard = ({
+  title,
+  subtitle,
+  description,
+  icon,
+  sx,
+}: any) => {
   const [expanded, setExpanded] = useState(false);
   const theme = useTheme();
-
   return (
     <Card
       sx={{
-        height: "100%",
         display: "flex",
         flexDirection: "column",
         borderRadius: "24px",
@@ -29,8 +33,10 @@ export const ServiceCard = ({ title, subtitle, description, icon }: any) => {
         boxShadow: expanded
           ? `0px 12px 24px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.3 : 0.08)}`
           : "none",
-        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition:
+          "transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease",
         overflow: "hidden",
+        width: "100%",
         "&:hover": {
           borderColor: "primary.main",
           transform: expanded ? "none" : "translateY(-6px)",
@@ -40,6 +46,7 @@ export const ServiceCard = ({ title, subtitle, description, icon }: any) => {
             boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
           },
         },
+        ...sx,
       }}
       elevation={0}
     >
@@ -96,6 +103,8 @@ export const ServiceCard = ({ title, subtitle, description, icon }: any) => {
               textAlign: "left",
               color: "text.secondary",
               lineHeight: 1.6,
+              height: "140px",
+              overflowY: "auto",
             }}
           >
             {description}
