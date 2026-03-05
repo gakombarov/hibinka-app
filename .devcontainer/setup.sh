@@ -21,8 +21,10 @@ pip install --upgrade pip
 pip install -r backend/requirements.txt
 echo "Backend готов."
 
-cd frontend
-npm install --no-audit
-echo "Frontend готов."
+echo "Устанавливаем зависимости Landing..."
+cd /workspace/frontend/landing && npm install --no-audit
+
+echo "Устанавливаем зависимости Dashboard..."
+cd /workspace/frontend/dashboard && npm install --no-audit
 
 echo "Все этапы настройки Hibinka51 завершены успешно!"

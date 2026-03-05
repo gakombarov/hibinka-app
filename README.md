@@ -1,12 +1,20 @@
-Проект автоматизации пассажирских перевозок Murmansk Edition.
+# 🚀 Hibinka51: Система автоматизации пассажирских перевозок
 
-### 🛠 Как запустить «в один клик»
-1. Клонируйте репозиторий.
-2. Подготовьте конфиг: `cp .env.example .env`.
-3. Откройте в VS Code и нажмите **Reopen in Container**.
-4. **Важно**: Когда VS Code предложит "Allow tasks to run on folder open", нажмите **Allow**.
+Модульная платформа для управления логистикой, бронирования поездок и администрирования рейсов (Murmansk Edition). Разработано в рамках проектной деятельности студента ПИ НИУ ВШЭ.
 
-### 🔗 Порты
-- **8000**: Backend API (Swagger)
-- **5173**: Landing Page
-- **5175**: Dashboard
+## 🛠 Стек технологий
+* **Backend:** Python 3.11, FastAPI, SQLAlchemy (Async), PostgreSQL.
+* **Frontend:** React, TypeScript, Vite.
+* **Инфраструктура:** Docker Compose, VS Code Dev Containers.
+
+---
+
+## 📦 Быстрый старт
+
+Проект полностью настроен для работы внутри **VS Code Dev Containers**. Это гарантирует запуск инфраструктуры «в один клик» на любой операционной системе без локальной установки Python или Node.js.
+
+### Шаг 1: Подготовка конфигурации
+1. Склонируйте репозиторий:
+   ```bash
+   git clone https://github.com/gakombarov/hibinka-app.git
+   cd hibinka-app
