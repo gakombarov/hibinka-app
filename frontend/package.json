@@ -1,0 +1,9 @@
+{
+  "name": "hibinka-workspace",
+  "private": true,
+  "workspaces": [
+    "landing",
+    "dashboard",
+    "shared"
+  ]
+}

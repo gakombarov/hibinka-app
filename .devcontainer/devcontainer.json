@@ -1,0 +1,24 @@
+{
+  "name": "Hibinka51 Workspace",
+  "dockerComposeFile": ["../docker-compose.dev.yml"],
+  "service": "workspace",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+        "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+        "remote.autoForwardPorts": false,
+        "remote.restoreForwardedPorts": false,
+        "remote.otherPortAttributes": { "onAutoForward": "ignore" }
+      }
+    }
+  },
+  "forwardPorts": [8000, 5173, 5175],
+  "portsAttributes": {
+    "8000": { "label": "FastAPI (Backend)" },
+    "5173": { "label": "Landing (Frontend)" },
+    "5175": { "label": "Dashboard (Admin)" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh"
+}

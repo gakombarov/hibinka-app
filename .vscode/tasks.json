@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start All Services",
+      "dependsOn": ["Start Backend", "Start Landing", "Start Dashboard"],
+      "runOptions": { "runOn": "folderOpen" }
+    },
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "fuser -k 8000/tcp || true && cd backend && source ../.venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+      "isBackground": true,
+      "problemMatcher": [] 
+    },
+    {
+      "label": "Start Landing",
+      "type": "shell",
+      "command": "fuser -k 5173/tcp || true && cd frontend/landing && npm run dev -- --host",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Dashboard",
+      "type": "shell",
+      "command": "fuser -k 5175/tcp || true && cd frontend/dashboard && npm run dev -- --host --port 5175",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
