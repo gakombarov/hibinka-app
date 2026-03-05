@@ -32,7 +32,7 @@ services:
       dockerfile: .devcontainer/Dockerfile.dev
     container_name: hibinka-workspace
     env_file:
-      - .env.dev
+      - .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-hibinka_db_dev}
     volumes:

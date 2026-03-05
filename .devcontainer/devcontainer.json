@@ -1,6 +1,6 @@
 {
   "name": "Hibinka51 Workspace",
-  "dockerComposeFile": ["../docker-compose.dev.yml"],
+  "dockerComposeFile": ["../docker-compose.yml"],
   "service": "workspace",
   "workspaceFolder": "/workspace",
   "customizations": {
