@@ -3,7 +3,7 @@
   "tasks": [
     {
       "label": "🚀 ЗАПУСТИТЬ ПРОЕКТ",
-      "dependsOn": ["Backend", "Landing", "Dashboard"],
+      "dependsOn": ["Backend", "Landing", "Shared"],
       "problemMatcher": []
     },
     {
@@ -21,9 +21,9 @@
       "presentation": { "group": "hibinka", "panel": "dedicated" }
     },
     {
-      "label": "Dashboard",
+      "label": "Shared",
       "type": "shell",
-      "command": "make start-dashboard",
+      "command": "make start-shared",
       "isBackground": true,
       "presentation": { "group": "hibinka", "panel": "dedicated" }
     }

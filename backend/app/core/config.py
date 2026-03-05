@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # --- CORS ---
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5175,http://localhost:3000"
 
     # --- Email (Yandex) ---
     EMAIL_HOST: str = "smtp.yandex.ru"

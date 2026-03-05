@@ -14,11 +14,11 @@
       }
     }
   },
-  "forwardPorts": [8000, 5173, 5175],
+  "forwardPorts": [8000, 5173, 5174],
   "portsAttributes": {
     "8000": { "label": "FastAPI (Backend)" },
     "5173": { "label": "Landing (Frontend)" },
-    "5175": { "label": "Dashboard (Admin)" }
+    "5174": { "label": "Shared Sandbox" }
   },
   "postCreateCommand": "bash .devcontainer/setup.sh"
 }

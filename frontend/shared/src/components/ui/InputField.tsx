@@ -1,5 +1,6 @@
+import React, { forwardRef } from "react";
 import styled from "@emotion/styled";
-import { TextField, alpha } from "@mui/material";
+import { TextField, alpha, type TextFieldProps } from "@mui/material";
 
 export const StyledTextField = styled(TextField)(({ theme }: any) => {
   const isDark = theme.palette.mode === "dark";
@@ -44,6 +45,15 @@ export const StyledTextField = styled(TextField)(({ theme }: any) => {
   };
 });
 
-export const InputField = (props: any) => (
-  <StyledTextField variant="outlined" fullWidth {...props} />
-);
+
+export const InputField = forwardRef<HTMLDivElement, TextFieldProps>((props, ref) => (
+  <StyledTextField 
+    variant="outlined" 
+    fullWidth 
+    {...props} 
+    inputRef={ref} 
+  />
+));
+
+// Полезно для отладки в DevTools
+InputField.displayName = "InputField";

@@ -22,7 +22,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
     networks:
       - hibinka-dev
 
@@ -38,14 +37,12 @@ services:
     volumes:
       - .:/workspace:cached
       - landing_node_modules:/workspace/frontend/landing/node_modules
-      - dashboard_node_modules:/workspace/frontend/dashboard/node_modules
       - shared_node_modules:/workspace/frontend/shared/node_modules
       - venv_data:/workspace/.venv
     ports:
       - "8000:8000" # FastAPI
       - "5173:5173" # Landing
-      - "5174:5174" # Shared
-      - "5175:5175" # Dashboard
+      - "5174:5174" # Shared Sandbox
     networks:
       - hibinka-dev
     command: sleep infinity
@@ -56,7 +53,6 @@ services:
 volumes:
   postgres_data_dev:
   landing_node_modules:
-  dashboard_node_modules:
   shared_node_modules:
   venv_data:
 

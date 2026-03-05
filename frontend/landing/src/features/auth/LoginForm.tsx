@@ -1,64 +1,100 @@
 import React, { useState } from "react";
-import { Stack, Typography, InputAdornment } from "@mui/material";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import { useForm, Controller } from "react-hook-form";
+import { useDispatch } from "react-redux";
+import { Stack, Alert, CircularProgress, Typography } from "@mui/material";
 
 import { InputField } from "@shared/components/ui/InputField";
 import { Button } from "@shared/components/ui/Button";
+import { setCredentials } from "../../store/authSlice";
+import { authApi } from "../../api/auth";
 
 interface LoginFormProps {
-  onLogin: () => void;
+  onLoginSuccess: () => void;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
+  const dispatch = useDispatch();
+  const [apiError, setApiError] = useState<string | null>(null);
+  
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    defaultValues: { email: "", password: "" }
+  });
+
+  const onSubmit = async (data: any) => {
+    setApiError(null); 
+    
+    try {
+      const { access_token } = await authApi.login(data.email, data.password);
+      const user = await authApi.getMe(access_token);
+      
+      dispatch(setCredentials({ user, token: access_token }));
+      onLoginSuccess();
+    } catch (error: any) {
+      setApiError(error.message || "Непредвиденная ошибка при входе");
+    }
+  };
 
   return (
-    <Stack spacing={3} sx={{ mt: 1 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Введите логин и пароль для входа в систему
-      </Typography>
-      <InputField
-        label="Логин (Email)"
-        placeholder="admin@hibinka51.ru"
-        value={email}
-        onChange={(e: any) => setEmail(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <PersonOutlineIcon color="action" />
-            </InputAdornment>
-          ),
-        }}
-      />
-      <InputField
-        label="Пароль"
-        type="password"
-        placeholder="*********"
-        value={password}
-        onChange={(e: any) => setPassword(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <LockOutlinedIcon color="action" />
-            </InputAdornment>
-          ),
-        }}
-      />
-      <Button
-        size="large"
-        onClick={onLogin}
-        sx={{
-          mt: 2,
-          py: 1.5,
-          fontSize: "1.1rem",
-          width: "100%",
-          color: "#1a1a1a",
-        }}
-      >
-        Войти в систему
-      </Button>
-    </Stack>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Stack spacing={3} sx={{ mt: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          Введите свои данные для доступа к панели управления.
+        </Typography>
+
+        {/* 3. Блок вывода ошибки (показывается только если apiError не null) */}
+        {apiError && (
+          <Alert 
+            severity="error" 
+            variant="filled" 
+            sx={{ borderRadius: "12px" }}
+          >
+            {apiError}
+          </Alert>
+        )}
+
+        <Controller
+          name="email"
+          control={control}
+          rules={{ required: "Укажите Email" }}
+          render={({ field }) => (
+            <InputField 
+              {...field} 
+              label="Логин (Email)" 
+              placeholder="admin@hibinka51.ru"
+              error={!!errors.email} 
+              helperText={errors.email?.message} 
+            />
+          )}
+        />
+
+        <Controller
+          name="password"
+          control={control}
+          rules={{ required: "Введите пароль" }}
+          render={({ field }) => (
+            <InputField 
+              {...field} 
+              label="Пароль" 
+              type="password" 
+              placeholder="********"
+              error={!!errors.password} 
+              helperText={errors.password?.message} 
+            />
+          )}
+        />
+
+        <Button 
+          type="submit" 
+          disabled={isSubmitting} 
+          sx={{ mt: 2, width: "100%", height: "48px" }}
+        >
+          {isSubmitting ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "Войти в систему"
+          )}
+        </Button>
+      </Stack>
+    </form>
   );
 };
