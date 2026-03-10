@@ -17,7 +17,6 @@ import { Footer } from "./components/layout/Footer";
 import { LoginForm } from "./features/auth/LoginForm";
 import { LandingPage } from "./pages/LandingPage";
 
-// НОВЫЕ ИМПОРТЫ ДЛЯ ДАШБОРДА
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { TripsJournal } from "./pages/TripsJournal";
 import { SandboxPage } from "./pages/Sandbox/SandboxPage";

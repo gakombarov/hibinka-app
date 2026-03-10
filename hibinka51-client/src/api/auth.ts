@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000/api/v1";
+import apiClient from "./client"; // Проверь, что импорт именно такой!
 
 export const authApi = {
   login: async (email: string, password: string) => {
@@ -6,30 +6,22 @@ export const authApi = {
     formData.append("username", email);
     formData.append("password", password);
 
-    const response = await fetch(`${API_URL}/auth/login/access-token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+    const response = await apiClient.post(
+      "/auth/login/access-token",
+      formData,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
       },
-      body: formData,
-    });
+    );
 
-    if (!response.ok) {
-      throw new Error("Неверный логин или пароль");
-    }
-    return response.json(); 
+    return response.data;
   },
 
-  getMe: async (token: string) => {
-    const response = await fetch(`${API_URL}/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Ошибка авторизации. Токен недействителен.");
-    }
-    return response.json();
+  getMe: async () => {
+    // Здесь тоже: путь относительно /api/v1
+    const response = await apiClient.get("/auth/me");
+    return response.data;
   },
 };

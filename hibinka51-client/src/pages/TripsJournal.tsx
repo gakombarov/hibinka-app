@@ -64,7 +64,7 @@ export const TripsJournal = () => {
   const fetchTrips = async () => {
     if (!token) return;
     try {
-      const data = await tripsApi.getAllTrips(token);
+      const data = await tripsApi.getAllTrips(0, 100);
       setTrips(data);
     } catch (error) {
       console.error("Ошибка загрузки:", error);

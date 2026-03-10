@@ -1,7 +1,4 @@
-import axios from "axios";
-
-// URL бэкенда
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+import apiClient from "./client";
 
 export interface Trip {
   id: string | number;
@@ -29,22 +26,15 @@ export interface TripCreate {
 }
 
 export const tripsApi = {
-  getAllTrips: async (
-    token: string,
-    skip = 0,
-    limit = 100,
-  ): Promise<Trip[]> => {
-    const response = await axios.get(`${API_URL}/trips/`, {
-      headers: { Authorization: `Bearer ${token}` },
+  getAllTrips: async (skip = 0, limit = 100): Promise<Trip[]> => {
+    const response = await apiClient.get("/trips/", {
       params: { skip, limit },
     });
     return response.data;
   },
 
-  createTrip: async (token: string, tripData: TripCreate): Promise<Trip> => {
-    const response = await axios.post(`${API_URL}/trips/`, tripData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  createTrip: async (tripData: TripCreate): Promise<Trip> => {
+    const response = await apiClient.post("/trips/", tripData);
     return response.data;
   },
 };

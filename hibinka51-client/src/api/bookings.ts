@@ -1,7 +1,5 @@
-import axios from "axios";
+import apiClient from "./client";
 import { BookingFormData } from "@shared/components/ui/BookingForm";
-
-const API_URL = "http://localhost:8000/api/v1/bookings";
 
 export const submitPublicBooking = async (data: BookingFormData) => {
   const payload = {
@@ -17,19 +15,13 @@ export const submitPublicBooking = async (data: BookingFormData) => {
     notes: data.comments || null,
   };
 
-  const response = await axios.post(`${API_URL}/public/booking/`, payload);
+  const response = await apiClient.post("/bookings/public/booking/", payload);
   return response.data;
 };
 
-export const fetchAdminBookings = async (
-  token: string,
-  skip = 0,
-  limit = 100,
-) => {
-  const response = await axios.get(`${API_URL}/?skip=${skip}&limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export const fetchAdminBookings = async (skip = 0, limit = 100) => {
+  const response = await apiClient.get("/bookings/", {
+    params: { skip, limit },
   });
   return response.data;
 };

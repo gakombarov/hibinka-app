@@ -15,22 +15,32 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const dispatch = useDispatch();
   const [apiError, setApiError] = useState<string | null>(null);
-  
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { email: "", password: "" }
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: any) => {
-    setApiError(null); 
-    
+    setApiError(null);
+
     try {
       const { access_token } = await authApi.login(data.email, data.password);
-      const user = await authApi.getMe(access_token);
-      
+
+      localStorage.setItem("token", access_token);
+
+      const user = await authApi.getMe();
+
       dispatch(setCredentials({ user, token: access_token }));
+
       onLoginSuccess();
     } catch (error: any) {
-      setApiError(error.message || "Непредвиденная ошибка при входе");
+      const errorMessage =
+        error.response?.data?.detail || error.message || "Ошибка при входе";
+      setApiError(errorMessage);
     }
   };
 
@@ -43,9 +53,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
         {/* 3. Блок вывода ошибки (показывается только если apiError не null) */}
         {apiError && (
-          <Alert 
-            severity="error" 
-            variant="filled" 
+          <Alert
+            severity="error"
+            variant="filled"
             sx={{ borderRadius: "12px" }}
           >
             {apiError}
@@ -57,12 +67,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           control={control}
           rules={{ required: "Укажите Email" }}
           render={({ field }) => (
-            <InputField 
-              {...field} 
-              label="Логин (Email)" 
+            <InputField
+              {...field}
+              label="Логин (Email)"
               placeholder="admin@hibinka51.ru"
-              error={!!errors.email} 
-              helperText={errors.email?.message} 
+              error={!!errors.email}
+              helperText={errors.email?.message}
             />
           )}
         />
@@ -72,20 +82,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           control={control}
           rules={{ required: "Введите пароль" }}
           render={({ field }) => (
-            <InputField 
-              {...field} 
-              label="Пароль" 
-              type="password" 
+            <InputField
+              {...field}
+              label="Пароль"
+              type="password"
               placeholder="********"
-              error={!!errors.password} 
-              helperText={errors.password?.message} 
+              error={!!errors.password}
+              helperText={errors.password?.message}
             />
           )}
         />
 
-        <Button 
-          type="submit" 
-          disabled={isSubmitting} 
+        <Button
+          type="submit"
+          disabled={isSubmitting}
           sx={{ mt: 2, width: "100%", height: "48px" }}
         >
           {isSubmitting ? (
