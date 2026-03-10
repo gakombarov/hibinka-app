@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, status, BackgroundTasks
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -22,19 +23,24 @@ async def create_public_booking(
     background_task: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Публичный эндпоинт для создания заявки с сайт.
-    Автоматически создает пользователя если он не найден по номеру телефона"""
+    """Публичный эндпоинт для создания заявки с сайта.
+    Автоматически ищет пользователя по телефону или email"""
 
     result = await db.execute(
         select(User).where(User.phone == booking_in.customer_phone)
     )
     user = result.scalars().first()
 
+    if not user and booking_in.customer_email:
+        email_check = await db.execute(
+            select(User).where(User.email == booking_in.customer_email)
+        )
+        user = email_check.scalars().first()
+
     if not user:
         email = (
             booking_in.customer_email or f"{booking_in.customer_phone}@placeholder.com"
         )
-
         user = User(
             phone=booking_in.customer_phone,
             email=email,
@@ -45,13 +51,6 @@ async def create_public_booking(
         db.add(user)
         await db.flush()
     else:
-        if booking_in.customer_email:
-            email_check = await db.execute(
-                select(User).where(User.email == booking_in.customer_email)
-            )
-            existing_user = email_check.scalars().first()
-            if not existing_user or existing_user.id == user.id:
-                user.email = booking_in.customer_email
         user.first_name = booking_in.customer_name
         db.add(user)
         await db.flush()
@@ -84,6 +83,8 @@ async def read_bookings(
     current_user: User = Depends(deps.get_current_admin_user),
 ):
     """Получить список всех заявок (Только для администраторов)"""
-    query = select(Booking).offset(skip).limit(limit)
+    query = (
+        select(Booking).options(joinedload(Booking.customer)).offset(skip).limit(limit)
+    )
     result = await db.execute(query)
     return result.scalars().all()
