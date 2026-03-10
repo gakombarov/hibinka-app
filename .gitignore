@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+env/
+.venv/
+
+# Environment files - PRODUCTION ТОЛЬКО!
+.env
+.env.*
+
+!.env.example
+!.env.test
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/*
+!.vscode/tasks.json
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.pid
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend UI
+# Custom Ignore
+backend/.transport-company-server-main/
+frontend/Passenger Transportation Service UI/
+
+# Nginx Proxy Manager
+npm/
+data/
+letsencrypt/
+.env
+__pycache__/
+node_modules/
+.devcontainer/

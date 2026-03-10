@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: hibinka-db-dev
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-hibinka_db_dev}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-hibinka_db_dev}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hibinka-dev
+
+  workspace:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.dev
+    container_name: hibinka-workspace
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-hibinka_db_dev}
+    volumes:
+      - .:/workspace:cached
+      - client_node_modules:/workspace/hibinka51-client/node_modules
+      - venv_data:/workspace/.venv
+    ports:
+      - "8000:8000" # FastAPI
+      - "5173:5173" # Client
+    networks:
+      - hibinka-dev
+    command: sleep infinity
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data_dev:
+  client_node_modules:
+  venv_data:
+
+networks:
+  hibinka-dev:
+    driver: bridge

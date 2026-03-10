@@ -1,0 +1,75 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+venv/
+env/
+ENV/
+.venv/
+virtualenv/
+*.egg-info/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Tests
+tests/
+test_*.py
+*_test.py
+.coverage
+htmlcov/
+
+# Documentation
+*.md
+README.md
+docs/
+CHANGELOG.md
+LICENSE
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+coverage/
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Logs
+*.log
+logs/
+
+# Database (если есть локальные SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+dist/
+build/
+*.egg

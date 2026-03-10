@@ -1,0 +1,55 @@
+services:
+  npm:
+    image: "jc21/nginx-proxy-manager:latest"
+    container_name: hibinka-npm
+    restart: always
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - hibinka-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: hibinka-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - hibinka-net
+
+  server:
+    build:
+      context: ./hibinka51-server
+      dockerfile: Dockerfile.server
+    container_name: hibinka-server
+    restart: always
+    env_file: .env
+    depends_on:
+      - db
+    networks:
+      - hibinka-net
+
+  client:
+    build:
+      context: ./hibinka51-client
+      dockerfile: Dockerfile.client
+    container_name: hibinka-client
+    restart: always
+    networks:
+      - hibinka-net
+
+volumes:
+  pg_data:
+
+networks:
+  hibinka-net:
+    driver: bridge
