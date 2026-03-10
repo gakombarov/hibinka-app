@@ -1,4 +1,4 @@
-import apiClient from "./client"; // Проверь, что импорт именно такой!
+import apiClient from "./client";
 
 export const authApi = {
   login: async (email: string, password: string) => {
@@ -20,7 +20,6 @@ export const authApi = {
   },
 
   getMe: async () => {
-    // Здесь тоже: путь относительно /api/v1
     const response = await apiClient.get("/auth/me");
     return response.data;
   },
