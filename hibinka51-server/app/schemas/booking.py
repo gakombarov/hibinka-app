@@ -65,6 +65,16 @@ class BookingCreatePublic(BookingBase):
         return v
 
 
+class BookingCustomerResponse(BaseModel):
+    """Схема для вложенных данных клиента"""
+
+    first_name: str
+    phone: str
+
+    class Config:
+        from_attributes = True
+
+
 class BookingResponse(BookingBase):
     """Схема для ответа API с данными о бронировании"""
 
@@ -72,6 +82,8 @@ class BookingResponse(BookingBase):
     customer_id: UUID
     source: BookingSource
     status: BookingStatus
+
+    customer: Optional[BookingCustomerResponse] = None
 
     class Config:
         from_attributes = True

@@ -19,6 +19,8 @@ import { LandingPage } from "./pages/LandingPage";
 
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { TripsJournal } from "./pages/TripsJournal";
+import { BookingDetails } from "./features/bookings/BookingDetails";
+import { BookingsList } from "./features/bookings/BookingsList";
 import { SandboxPage } from "./pages/Sandbox/SandboxPage";
 
 import type { RootState } from "./store/store";
@@ -99,15 +101,11 @@ const AppContent = () => {
               {/* Наши страницы внутри Дашборда */}
               <Route path="trips" element={<TripsJournal />} />
 
+              {/* Роуты для заявок с сайта*/}
+              <Route path="bookings" element={<BookingsList />} />
+              <Route path="bookings/:id" element={<BookingDetails />} />
+
               {/* Заглушки для будущих страниц */}
-              <Route
-                path="bookings"
-                element={
-                  <Box sx={{ p: 4 }}>
-                    <h1>Заявки (в разработке)</h1>
-                  </Box>
-                }
-              />
               <Route
                 path="schedule"
                 element={
