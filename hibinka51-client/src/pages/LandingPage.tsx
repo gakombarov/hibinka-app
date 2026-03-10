@@ -294,13 +294,6 @@ export const LandingPage = () => {
                     >
                       +7 (953) 304-78-44 Инна
                     </Typography>
-                    <Typography
-                      variant="h6"
-                      fontWeight="900"
-                      color="text.primary"
-                    >
-                      +7 (000) 000-00-00 Александр
-                    </Typography>
                   </Box>
                 </Box>
               </Grid>
