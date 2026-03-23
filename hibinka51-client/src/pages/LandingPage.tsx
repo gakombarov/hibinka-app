@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Box,
   Container,
@@ -35,6 +35,10 @@ export const LandingPage = () => {
     message: "",
     severity: "success" as "success" | "error",
   });
+
+  useEffect(() => {
+    document.title = "HIBINKA51 | Пассажирские перевозки и трансфер Мурманск";
+  }, []);
 
   const scrollToSchedule = () =>
     scheduleRef.current?.scrollIntoView({ behavior: "smooth" });
