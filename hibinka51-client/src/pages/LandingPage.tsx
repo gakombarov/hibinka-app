@@ -72,7 +72,7 @@ export const LandingPage = () => {
         sx={{
           bgcolor: "#111418",
           backgroundImage:
-            'linear-gradient(rgba(32, 51, 74, 0.75), rgba(17, 20, 24, 0.95)), url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2000&q=80")',
+            'linear-gradient(rgba(32, 51, 74, 0.75), rgba(17, 20, 24, 0.95)), url("src/assets/bus-image.avif")',
           backgroundSize: "cover",
           backgroundPosition: "center",
           color: "white",
