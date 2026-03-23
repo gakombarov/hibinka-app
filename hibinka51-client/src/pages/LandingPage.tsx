@@ -34,7 +34,6 @@ export const LandingPage = () => {
     severity: "success" as "success" | "error",
   });
 
-  // SEO: Динамический тайтл страницы
   useEffect(() => {
     document.title = "HIBINKA51 | Пассажирские перевозки и трансфер Мурманск";
   }, []);
@@ -43,7 +42,6 @@ export const LandingPage = () => {
     scheduleRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const handleBookingSubmit = async (data: any) => {
-    // Замени any на BookingFormData, если импортируешь тип
     setIsLoading(true);
     try {
       await submitPublicBooking(data);
