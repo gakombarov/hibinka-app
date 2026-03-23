@@ -18,11 +18,9 @@ import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
 import { Button } from "@shared/components/ui/Button";
 import { Modal } from "@shared/components/ui/Modal";
 import { ServiceCard } from "@shared/components/cards/ServiceCard";
-import { TripCard } from "@shared/components/cards/TripCard";
-
 import { BookingForm } from "@shared/components/ui/BookingForm";
 import { services as servicesData } from "@shared/services";
-import { submitPublicBooking } from ".././api/bookings";
+import { submitPublicBooking } from "../api/bookings";
 
 export const LandingPage = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -43,18 +41,16 @@ export const LandingPage = () => {
   const scrollToSchedule = () =>
     scheduleRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const handleBookingSubmit = async (data: BookingFormData) => {
+  const handleBookingSubmit = async (data: any) => {
     setIsLoading(true);
     try {
       await submitPublicBooking(data);
-
       setSnackbar({
         open: true,
         message:
           "Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.",
         severity: "success",
       });
-
       setIsBookingModalOpen(false);
     } catch (error) {
       console.error("Ошибка при отправке заявки:", error);
@@ -70,13 +66,18 @@ export const LandingPage = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-      {/* HERO СЕКЦИЯ */}
+    <Box
+      component="main"
+      sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+    >
+      {/* HERO СЕКЦИЯ: превращаем в <section> */}
       <Box
+        component="section"
+        aria-label="Главный экран"
         sx={{
           bgcolor: "#111418",
           backgroundImage:
-            'linear-gradient(rgba(32, 51, 74, 0.75), rgba(17, 20, 24, 0.95)), url("src/assets/bus-image.avif")',
+            'linear-gradient(rgba(32, 51, 74, 0.75), rgba(17, 20, 24, 0.95)), url("https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2000&q=80")',
           backgroundSize: "cover",
           backgroundPosition: "center",
           color: "white",
@@ -91,9 +92,7 @@ export const LandingPage = () => {
       >
         <Container maxWidth={false}>
           <Grid container spacing={4} alignItems="center">
-            {" "}
             <Grid size={{ xs: 12, md: 8 }}>
-              {" "}
               <Box
                 sx={{
                   display: "inline-block",
@@ -110,6 +109,7 @@ export const LandingPage = () => {
               </Box>
               <Typography
                 variant="h1"
+                component="h1"
                 fontWeight="900"
                 sx={{
                   mb: 3,
@@ -122,6 +122,7 @@ export const LandingPage = () => {
               </Typography>
               <Typography
                 variant="h6"
+                component="p"
                 sx={{
                   color: "#9CA3AF",
                   mb: 5,
@@ -161,20 +162,27 @@ export const LandingPage = () => {
           </Grid>
         </Container>
       </Box>
+
       {/* ОСНОВНОЙ КОНТЕНТ */}
       <Container maxWidth={false} sx={{ flexGrow: 1, mb: 8 }}>
         <Stack spacing={{ xs: 8, md: 10 }}>
           {/* СЕКЦИЯ: Услуги */}
-          <Box>
+          <Box component="section" aria-label="Наши услуги">
             <Typography
               variant="h4"
+              component="h2"
               fontWeight="900"
               color="text.primary"
               sx={{ mb: 1, fontSize: { xs: "1.8rem", md: "2.125rem" } }}
             >
               Наши услуги
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            <Typography
+              variant="body1"
+              component="p"
+              color="text.secondary"
+              sx={{ mb: 4 }}
+            >
               Решения для бизнеса и частных лиц
             </Typography>
             <Grid container spacing={3} alignItems="flex-start">
@@ -186,8 +194,13 @@ export const LandingPage = () => {
             </Grid>
           </Box>
 
-          {/* СЕКЦИЯ: Расписание (Заглушка) */}
-          <Box ref={scheduleRef} sx={{ scrollMarginTop: "100px" }}>
+          {/* СЕКЦИЯ: Расписание */}
+          <Box
+            component="section"
+            aria-label="Расписание"
+            ref={scheduleRef}
+            sx={{ scrollMarginTop: "100px" }}
+          >
             <Box
               sx={{
                 display: "flex",
@@ -199,13 +212,18 @@ export const LandingPage = () => {
               <Box>
                 <Typography
                   variant="h4"
+                  component="h2"
                   fontWeight="900"
                   color="text.primary"
                   sx={{ mb: 1, fontSize: { xs: "1.8rem", md: "2.125rem" } }}
                 >
                   Ближайшие рейсы
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography
+                  variant="body1"
+                  component="p"
+                  color="text.secondary"
+                >
                   Постоянные и регулярные маршруты
                 </Typography>
               </Box>
@@ -229,9 +247,11 @@ export const LandingPage = () => {
                   mb: 2,
                   opacity: 0.3,
                 }}
+                aria-hidden="true"
               />
               <Typography
                 variant="h5"
+                component="h3"
                 fontWeight="800"
                 color="text.primary"
                 gutterBottom
@@ -240,6 +260,7 @@ export const LandingPage = () => {
               </Typography>
               <Typography
                 variant="body1"
+                component="p"
                 color="text.secondary"
                 sx={{ maxWidth: "400px", mx: "auto" }}
               >
@@ -249,12 +270,12 @@ export const LandingPage = () => {
           </Box>
 
           {/* СЕКЦИЯ: Форма заявки */}
-          <Box>
+          <Box component="section" aria-label="Форма заказа">
             <Grid container spacing={4} alignItems="center">
               <Grid size={{ xs: 12, md: 5 }}>
-                {" "}
                 <Typography
                   variant="h3"
+                  component="h2"
                   fontWeight="900"
                   color="text.primary"
                   sx={{ mb: 2, fontSize: { xs: "2rem", md: "3rem" } }}
@@ -263,6 +284,7 @@ export const LandingPage = () => {
                 </Typography>
                 <Typography
                   variant="body1"
+                  component="p"
                   color="text.secondary"
                   sx={{ mb: 4, fontSize: "1.1rem" }}
                 >
@@ -281,11 +303,15 @@ export const LandingPage = () => {
                       justifyContent: "center",
                     }}
                   >
-                    <PhoneOutlinedIcon sx={{ color: "#1a1a1a" }} />
+                    <PhoneOutlinedIcon
+                      sx={{ color: "#1a1a1a" }}
+                      aria-hidden="true"
+                    />
                   </Box>
                   <Box>
                     <Typography
                       variant="caption"
+                      component="p"
                       color="text.secondary"
                       fontWeight="700"
                     >
@@ -293,6 +319,7 @@ export const LandingPage = () => {
                     </Typography>
                     <Typography
                       variant="h6"
+                      component="p"
                       fontWeight="900"
                       color="text.primary"
                     >
@@ -302,7 +329,6 @@ export const LandingPage = () => {
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 7 }}>
-                {" "}
                 <Card
                   sx={{
                     p: { xs: 2, md: 5 },
@@ -328,7 +354,8 @@ export const LandingPage = () => {
           </Box>
         </Stack>
       </Container>
-      {/* Модальное окно */}
+
+      {/* Модальное окно и Snackbar остаются как были */}
       <Modal
         open={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
@@ -336,7 +363,6 @@ export const LandingPage = () => {
       >
         <BookingForm onSubmit={handleBookingSubmit} isLoading={isLoading} />
       </Modal>
-      {/* Всплывающее уведомление (Snackbar) */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
