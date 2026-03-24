@@ -20,40 +20,38 @@ router = APIRouter()
 )
 async def create_public_booking(
     booking_in: BookingCreatePublic,
-    background_task: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Публичный эндпоинт для создания заявки с сайта.
-    Автоматически ищет пользователя по телефону или email"""
+    """Публичный эндпоинт для создания заявки с сайта."""
 
     result = await db.execute(
         select(User).where(User.phone == booking_in.customer_phone)
     )
     user = result.scalars().first()
 
-    if not user and booking_in.customer_email:
-        email_check = await db.execute(
-            select(User).where(User.email == booking_in.customer_email)
-        )
-        user = email_check.scalars().first()
-
     if not user:
-        email = (
-            booking_in.customer_email or f"{booking_in.customer_phone}@placeholder.com"
+        email_val = (
+            booking_in.customer_email
+            or f"user_{booking_in.customer_phone}@hibinka.local"
         )
+
         user = User(
             phone=booking_in.customer_phone,
-            email=email,
+            email=email_val,
             account_type=UserRole.CUSTOMER,
             first_name=booking_in.customer_name,
             hashed_password="",
         )
         db.add(user)
-        await db.flush()
     else:
         user.first_name = booking_in.customer_name
+
+        if booking_in.customer_email and "@hibinka.local" in user.email:
+            user.email = booking_in.customer_email
+
         db.add(user)
-        await db.flush()
+
+    await db.flush()
 
     booking = Booking(
         customer_id=user.id,

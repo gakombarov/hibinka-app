@@ -31,16 +31,16 @@ class BookingCreatePublic(BookingBase):
     @field_validator("customer_phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        """Валидация и нормализация российского номера телефона"""
+        """Валидация и нормализация номера телефона"""
         phone = re.sub(r"\D", "", v)
 
-        if not re.match(r"^[78]\d{10}$", phone):
-            raise ValueError(
-                "Неверный формат телефона. Используйте формат: +7 (xxx) xxx-xx-xx"
-            )
-
-        if phone.startswith("8"):
+        if len(phone) == 10:
+            phone = "7" + phone
+        elif len(phone) == 11 and phone.startswith("8"):
             phone = "7" + phone[1:]
+
+        if not re.match(r"^7\d{10}$", phone):
+            raise ValueError("Введите корректный номер телефона (11 цифр)")
 
         return f"+{phone}"
 
