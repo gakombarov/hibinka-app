@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Container,
@@ -11,32 +11,47 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { Helmet } from "react-helmet-async";
 
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
+import vkLogo from "../assets/vk-logo.png";
+import tgLogo from "../assets/tg-logo.png";
+import maxLogo from "../assets/max-logo.png";
 
-import { Button } from "@shared/components/ui/Button";
+import { Button as CustomButton } from "@shared/components/ui/Button";
+import { Button } from "@mui/material";
 import { Modal } from "@shared/components/ui/Modal";
 import { ServiceCard } from "@shared/components/cards/ServiceCard";
 import { BookingForm } from "@shared/components/ui/BookingForm";
 import { services as servicesData } from "@shared/services";
 import { submitPublicBooking } from "../api/bookings";
 
+const CONTACTS = {
+  vk: "https://vk.com/club237004378",
+  inna: {
+    phone: "+79533047844",
+    phoneDisplay: "+7 (953) 304-78-44",
+    tg: "",
+    max: "",
+  },
+  sasha: {
+    phone: "+79211534636",
+    phoneDisplay: "+7 (921) 153-46-36",
+    tg: "",
+    max: "",
+  },
+};
+
 export const LandingPage = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const theme = useTheme();
-
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error",
   });
-
-  useEffect(() => {
-    document.title = "HIBINKA51 | Пассажирские перевозки и трансфер Мурманск";
-  }, []);
 
   const scrollToSchedule = () =>
     scheduleRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,8 +62,7 @@ export const LandingPage = () => {
       await submitPublicBooking(data);
       setSnackbar({
         open: true,
-        message:
-          "Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.",
+        message: "Заявка успешно отправлена!",
         severity: "success",
       });
       setIsBookingModalOpen(false);
@@ -56,8 +70,7 @@ export const LandingPage = () => {
       console.error("Ошибка при отправке заявки:", error);
       setSnackbar({
         open: true,
-        message:
-          "Произошла ошибка при отправке. Пожалуйста, позвоните нам по телефону.",
+        message: "Произошла ошибка при отправке. Пожалуйста, позвоните нам.",
         severity: "error",
       });
     } finally {
@@ -65,15 +78,56 @@ export const LandingPage = () => {
     }
   };
 
+  const messengerButtonStyle = {
+    borderRadius: "12px",
+    py: 1,
+    px: 2,
+    color: "text.primary",
+    borderColor: "divider",
+    textTransform: "none",
+    fontSize: "1rem",
+    justifyContent: "flex-start",
+    "&:hover": {
+      borderColor: "primary.main",
+      bgcolor: alpha(theme.palette.primary.main, 0.05),
+    },
+  };
+
   return (
     <Box
       component="main"
       sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
     >
-      {/* HERO СЕКЦИЯ: превращаем в <section> */}
+      {/* --- SEO БЛОК ДЛЯ РОБОТОВ --- */}
+      <Helmet>
+        <title>HIBINKA51 | Трансфер Мурманск — Кировск и область</title>
+        <meta
+          name="description"
+          content="Надежный трансфер по Мурманской области. Доставка сотрудников и горнолыжников в Кировск, Териберку, Апатиты."
+        />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TaxiService",
+            name: "HIBINKA51",
+            provider: {
+              "@type": "LocalBusiness",
+              name: "HIBINKA51",
+              telephone: [CONTACTS.inna.phone, CONTACTS.sasha.phone],
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: "Мурманск",
+                addressRegion: "Мурманская область",
+              },
+            },
+            areaServed: ["Кировск", "Мурманск", "Апатиты", "Териберка"],
+          })}
+        </script>
+      </Helmet>
+
+      {/* HERO СЕКЦИЯ */}
       <Box
         component="section"
-        aria-label="Главный экран"
         sx={{
           bgcolor: "#111418",
           backgroundImage:
@@ -117,8 +171,8 @@ export const LandingPage = () => {
                   lineHeight: 1.1,
                 }}
               >
-                Надежный трансфер <br />
-                по <span style={{ color: "#F4C430" }}>Мурманской области</span>
+                Надежный трансфер <br /> по{" "}
+                <span style={{ color: "#F4C430" }}>Мурманской области</span>
               </Typography>
               <Typography
                 variant="h6"
@@ -135,16 +189,17 @@ export const LandingPage = () => {
                 Комфорт и безопасность в любых погодных условиях.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <Button
+                <CustomButton
                   size="large"
                   onClick={scrollToSchedule}
                   sx={{ py: 1.5, px: 4, fontSize: "1.1rem", color: "#1a1a1a" }}
                 >
                   Посмотреть расписание
-                </Button>
-                <Button
+                </CustomButton>
+                <CustomButton
                   size="large"
                   variant="outlined"
+                  onClick={() => setIsBookingModalOpen(true)}
                   sx={{
                     color: "white",
                     borderColor: "rgba(255,255,255,0.3)",
@@ -153,10 +208,9 @@ export const LandingPage = () => {
                     fontSize: "1.1rem",
                     "&:hover": { borderColor: "white" },
                   }}
-                  onClick={() => setIsBookingModalOpen(true)}
                 >
                   Заказать трансфер
-                </Button>
+                </CustomButton>
               </Stack>
             </Grid>
           </Grid>
@@ -167,7 +221,7 @@ export const LandingPage = () => {
       <Container maxWidth={false} sx={{ flexGrow: 1, mb: 8 }}>
         <Stack spacing={{ xs: 8, md: 10 }}>
           {/* СЕКЦИЯ: Услуги */}
-          <Box component="section" aria-label="Наши услуги">
+          <Box component="section">
             <Typography
               variant="h4"
               component="h2"
@@ -197,7 +251,6 @@ export const LandingPage = () => {
           {/* СЕКЦИЯ: Расписание */}
           <Box
             component="section"
-            aria-label="Расписание"
             ref={scheduleRef}
             sx={{ scrollMarginTop: "100px" }}
           >
@@ -264,14 +317,15 @@ export const LandingPage = () => {
                 color="text.secondary"
                 sx={{ maxWidth: "400px", mx: "auto" }}
               >
-                Здесь появятся актуальные рейсы из базы данных.
+                Здесь появятся актуальные рейсы.
               </Typography>
             </Card>
           </Box>
 
-          {/* СЕКЦИЯ: Форма заявки */}
-          <Box component="section" aria-label="Форма заказа">
-            <Grid container spacing={4} alignItems="center">
+          {/* СЕКЦИЯ: Контакты и Форма заявки */}
+          <Box component="section">
+            <Grid container spacing={4} alignItems="flex-start">
+              {/* ЛЕВАЯ ЧАСТЬ: Контакты-кнопки*/}
               <Grid size={{ xs: 12, md: 5 }}>
                 <Typography
                   variant="h3"
@@ -280,54 +334,212 @@ export const LandingPage = () => {
                   color="text.primary"
                   sx={{ mb: 2, fontSize: { xs: "2rem", md: "3rem" } }}
                 >
-                  Готовы к поездке?
+                  Свяжитесь с нами
                 </Typography>
                 <Typography
                   variant="body1"
-                  component="p"
                   color="text.secondary"
                   sx={{ mb: 4, fontSize: "1.1rem" }}
                 >
-                  Оставьте заявку онлайн. Наш диспетчер рассчитает стоимость и
-                  свяжется с вами для подтверждения.
+                  Оставьте заявку онлайн или напишите нам напрямую.
                 </Typography>
-                <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                  <Box
-                    sx={{
-                      bgcolor: "primary.main",
-                      width: 48,
-                      height: 48,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <PhoneOutlinedIcon
-                      sx={{ color: "#1a1a1a" }}
-                      aria-hidden="true"
-                    />
-                  </Box>
+
+                <Stack spacing={4}>
+                  {/* Общая группа ВК */}
                   <Box>
                     <Typography
-                      variant="caption"
-                      component="p"
-                      color="text.secondary"
+                      variant="overline"
                       fontWeight="700"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 1 }}
                     >
-                      Или позвоните нам
+                      Наши соцсети
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      component="a"
+                      href={CONTACTS.vk}
+                      target="_blank"
+                      startIcon={
+                        <img
+                          src={vkLogo}
+                          alt="ВКонтакте"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            objectFit: "contain",
+                          }}
+                        />
+                      }
+                      sx={{ ...messengerButtonStyle, width: "fit-content" }}
+                    >
+                      Группа ВКонтакте
+                    </Button>
+                  </Box>
+
+                  {/* Блок: ИННА */}
+                  <Box>
+                    <Typography
+                      variant="overline"
+                      fontWeight="700"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.5 }}
+                    ></Typography>
+                    <Typography
+                      variant="h5"
+                      fontWeight="900"
+                      sx={{ mb: 0.5, color: "text.primary" }}
+                    >
+                      Инна
                     </Typography>
                     <Typography
-                      variant="h6"
-                      component="p"
+                      variant="h4"
+                      component="a"
+                      href={`tel:${CONTACTS.inna.phone}`}
                       fontWeight="900"
-                      color="text.primary"
+                      color="primary.main"
+                      sx={{
+                        textDecoration: "none",
+                        display: "block",
+                        mb: 2,
+                        "&:hover": { opacity: 0.8 },
+                      }}
                     >
-                      +7 (953) 304-78-44 Инна
+                      {CONTACTS.inna.phoneDisplay}
                     </Typography>
+
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      flexWrap="wrap"
+                      useFlexGap
+                    >
+                      <Button
+                        variant="outlined"
+                        component="a"
+                        href={CONTACTS.inna.tg}
+                        target="_blank"
+                        startIcon={
+                          <img
+                            src={tgLogo}
+                            alt="Telegram"
+                            style={{
+                              width: 24,
+                              height: 24,
+                              objectFit: "contain",
+                            }}
+                          />
+                        }
+                        sx={messengerButtonStyle}
+                      >
+                        Telegram
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        component="a"
+                        href={CONTACTS.inna.max}
+                        target="_blank"
+                        startIcon={
+                          <img
+                            src={maxLogo}
+                            alt="Max"
+                            style={{
+                              width: 24,
+                              height: 24,
+                              objectFit: "contain",
+                            }}
+                          />
+                        }
+                        sx={messengerButtonStyle}
+                      >
+                        Написать в Max
+                      </Button>
+                    </Stack>
                   </Box>
-                </Box>
+
+                  {/* Блок: САША */}
+                  <Box>
+                    <Typography
+                      variant="overline"
+                      fontWeight="700"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.5 }}
+                    ></Typography>
+                    <Typography
+                      variant="h5"
+                      fontWeight="900"
+                      sx={{ mb: 0.5, color: "text.primary" }}
+                    >
+                      Саша
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      component="a"
+                      href={`tel:${CONTACTS.sasha.phone}`}
+                      fontWeight="900"
+                      color="primary.main"
+                      sx={{
+                        textDecoration: "none",
+                        display: "block",
+                        mb: 2,
+                        "&:hover": { opacity: 0.8 },
+                      }}
+                    >
+                      {CONTACTS.sasha.phoneDisplay}
+                    </Typography>
+
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      flexWrap="wrap"
+                      useFlexGap
+                    >
+                      <Button
+                        variant="outlined"
+                        component="a"
+                        href={CONTACTS.sasha.tg}
+                        target="_blank"
+                        startIcon={
+                          <img
+                            src={tgLogo}
+                            alt="Telegram"
+                            style={{
+                              width: 24,
+                              height: 24,
+                              objectFit: "contain",
+                            }}
+                          />
+                        }
+                        sx={messengerButtonStyle}
+                      >
+                        Telegram
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        component="a"
+                        href={CONTACTS.sasha.max}
+                        target="_blank"
+                        startIcon={
+                          <img
+                            src={maxLogo}
+                            alt="Max"
+                            style={{
+                              width: 24,
+                              height: 24,
+                              objectFit: "contain",
+                            }}
+                          />
+                        }
+                        sx={messengerButtonStyle}
+                      >
+                        Написать в Max
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Stack>
               </Grid>
+
+              {/* ПРАВАЯ ЧАСТЬ: Форма*/}
               <Grid size={{ xs: 12, md: 7 }}>
                 <Card
                   sx={{
@@ -355,7 +567,7 @@ export const LandingPage = () => {
         </Stack>
       </Container>
 
-      {/* Модальное окно и Snackbar остаются как были */}
+      {/* Модалки и Уведомления */}
       <Modal
         open={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}

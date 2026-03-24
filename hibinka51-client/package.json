@@ -22,9 +22,12 @@
     "dayjs": "^1.11.19",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-helmet-async": "^3.0.0",
     "react-hook-form": "^7.71.2",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.13.1"
+    "react-router-dom": "^7.13.1",
+    "react-yandex-metrika": "^2.6.0",
+    "vite-plugin-sitemap": "^0.8.2"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.1",
