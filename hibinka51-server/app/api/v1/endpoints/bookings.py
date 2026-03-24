@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from app.api import deps
 from app.core.database import get_db
@@ -22,13 +22,12 @@ async def create_public_booking(
     booking_in: BookingCreatePublic,
     db: AsyncSession = Depends(get_db),
 ):
-    """Публичный эндпоинт для создания заявки с сайта."""
+    conditions = [User.phone == booking_in.customer_phone]
+    if booking_in.customer_email:
+        conditions.append(User.email == booking_in.customer_email)
 
-    result = await db.execute(
-        select(User).where(User.phone == booking_in.customer_phone)
-    )
+    result = await db.execute(select(User).where(or_(*conditions)))
     user = result.scalars().first()
-
     if not user:
         email_val = (
             booking_in.customer_email
@@ -43,6 +42,7 @@ async def create_public_booking(
             hashed_password="",
         )
         db.add(user)
+        await db.flush()
     else:
         user.first_name = booking_in.customer_name
 
@@ -50,8 +50,6 @@ async def create_public_booking(
             user.email = booking_in.customer_email
 
         db.add(user)
-
-    await db.flush()
 
     booking = Booking(
         customer_id=user.id,
