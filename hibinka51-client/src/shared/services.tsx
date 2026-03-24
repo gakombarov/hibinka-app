@@ -1,35 +1,33 @@
-import Business from "@mui/icons-material/Business";
-import Engineering from "@mui/icons-material/Engineering";
-import LocationOn from "@mui/icons-material/LocationOn";
-import DirectionsCar from "@mui/icons-material/DirectionsCar";
+// hibinka51-client/src/shared/services.tsx
+import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
+import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
+import AirportShuttleIcon from "@mui/icons-material/AirportShuttle";
+import GroupsIcon from "@mui/icons-material/Groups";
+import SnowboardingIcon from "@mui/icons-material/Snowboarding";
 
 export const services = [
   {
-    title: "Корпоративный транспорт",
-    subtitle: "Регулярные перевозки сотрудников",
+    title: "Доставка сотрудников",
     description:
-      "Надежные ежедневные транспортные услуги для корпоративных клиентов. Мы предоставляем комфортабельные автобусы с профессиональными водителями для доставки сотрудников, гарантируя пунктуальность и безопасность. Возможны индивидуальные графики под нужды вашего бизнеса.",
-    icon: <Business fontSize="large" />,
+      "Организация регулярных маршрутов для персонала компаний. Надежная доставка до места работы и обратно.",
+    icon: <BusinessCenterIcon />,
+  },
+  {
+    title: "Трансфер для туристов",
+    description:
+      "Встреча в аэропорту, перевозка групп и горнолыжного снаряжения для отдыха в Кировске и области.",
+    icon: <SnowboardingIcon />,
   },
   {
     title: "Вахтовые перевозки",
-    subtitle: "Транспорт для вахтовых рабочих",
     description:
-      "Специализированные транспортные решения для вахтовиков, включающие дальние поездки на удаленные объекты. Мы обеспечиваем оптимизированную логистику и строгие стандарты безопасности для предприятий тяжелой промышленности.",
-    icon: <Engineering fontSize="large" />,
-  },
-  {
-    title: "Регулярные маршруты",
-    subtitle: "Маршрутные пассажирские перевозки",
-    description:
-      "Комплексное управление общественными и коммерческими маршрутами. Мы занимаемся составлением расписания, управлением автопарком и обеспечением комфорта пассажиров на городских и междугородних линиях.",
-    icon: <LocationOn fontSize="large" />,
+      "Профессиональная доставка сменного персонала предприятий по всей Мурманской области.",
+    icon: <DirectionsBusIcon />,
   },
   {
     title: "Частные трансферы",
-    subtitle: "Индивидуальные и групповые поездки",
     description:
-      "Трансферы премиум-класса для VIP-персон, встречи в аэропорту и обслуживание мероприятий. В нашем парке седаны и минивэны люкс-класса с высококвалифицированными водителями, ориентированными на конфиденциальность и комфорт.",
-    icon: <DirectionsCar fontSize="large" />,
+      "Аренда микроавтобуса с водителем для экскурсий, праздников и индивидуальных поездок.",
+    icon: <GroupsIcon />,
   },
 ];
