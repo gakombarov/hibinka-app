@@ -15,7 +15,7 @@ export const submitPublicBooking = async (data: BookingFormData) => {
     notes: data.comments || null,
   };
 
-  const response = await apiClient.post("/bookings/public/booking/", payload);
+  const response = await apiClient.post("/bookings/public/booking", payload);
   return response.data;
 };
 
