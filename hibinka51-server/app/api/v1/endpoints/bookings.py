@@ -66,7 +66,11 @@ async def create_public_booking(
 
     db.add(booking)
     await db.commit()
+
     await db.refresh(booking)
+    await db.refresh(user)
+
+    booking.customer = user
 
     return booking
 
