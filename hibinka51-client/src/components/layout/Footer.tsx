@@ -89,7 +89,7 @@ export const Footer = () => {
                     transition: "color 0.2s",
                   }}
                 >
-                  +7 (921) 153-46-36 (Саша)
+                  +7 (921) 153-46-36 (Александр)
                 </Link>
               </Box>
 

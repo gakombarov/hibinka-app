@@ -31,14 +31,14 @@ const CONTACTS = {
   inna: {
     phone: "+79533047844",
     phoneDisplay: "+7 (953) 304-78-44",
-    tg: "",
-    max: "",
+    tg: "https://t.me/inkom1974",
+    max: "https://max.ru/u/f9LHodD0cOK8_Ydonm0tV1K7ILmI2nN2gbwkx7NWSmWD_tYfXx0ju2VB3vA",
   },
   sasha: {
     phone: "+79211534636",
     phoneDisplay: "+7 (921) 153-46-36",
-    tg: "",
-    max: "",
+    tg: "https://t.me/aldr1970",
+    max: "https://max.ru/u/f9LHodD0cOJfhXSID9we4MuPTIZIjblkW1HTTVv8D5R9zS0_sleJza9hGNo",
   },
 };
 
@@ -470,7 +470,7 @@ export const LandingPage = () => {
                       fontWeight="900"
                       sx={{ mb: 0.5, color: "text.primary" }}
                     >
-                      Саша
+                      Александр
                     </Typography>
                     <Typography
                       variant="h4"
