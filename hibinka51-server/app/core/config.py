@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # --- CORS ---
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5175,http://localhost:3000"
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://localhost:5175,http://localhost:3000"
+    )
 
     # --- Email (Yandex) ---
     EMAIL_HOST: str = "smtp.yandex.ru"
@@ -35,10 +37,7 @@ class Settings(BaseSettings):
 
     # Настройки Pydantic v2: объединяем env_file и правила обработки
     model_config = SettingsConfigDict(
-        env_file=".env.dev",
-        env_file_encoding='utf-8',
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
     @property
