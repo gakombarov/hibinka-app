@@ -6,10 +6,39 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  build-and-push:
+    name: Build & Push to Docker Hub
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hibinka51-server
+          file: ./hibinka51-server/Dockerfile.server
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:latest
+
+      - name: Build and push Client
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hibinka51-client
+          file: ./hibinka51-client/Dockerfile.client
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:latest
+
+  deploy:
+    name: Deploy to Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
     steps:
       - name: Execute deployment script via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -17,12 +46,10 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-
           script: |
-            cd hibinka-app
-
-            git pull origin main
-            docker compose -f docker-compose.prod.yml build --no-cache client server
-            docker compose -f docker-compose.prod.yml up -d --force-recreate server client
-            docker image prune -f
+            cd hibinka-app && \
+            git pull origin main && \
+            docker compose -f docker-compose.prod.yml pull && \
+            docker compose -f docker-compose.prod.yml up -d --force-recreate server client && \
+            docker image prune -f && \
             docker compose -f docker-compose.prod.yml exec -T server alembic upgrade head
