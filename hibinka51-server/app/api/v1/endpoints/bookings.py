@@ -1,5 +1,6 @@
+from uuid import UUID
 from typing import List
-from fastapi import APIRouter, Depends, status, BackgroundTasks
+from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
@@ -8,9 +9,40 @@ from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking, BookingSource, BookingStatus
 from app.models.user import User, UserRole
-from app.schemas.booking import BookingCreatePublic, BookingResponse
+from app.schemas.booking import BookingCreatePublic, BookingResponse, BookingUpdate
 
 router = APIRouter()
+
+
+@router.patch("/{booking_id}", response_model=BookingResponse)
+async def update_booking(
+    booking_id: UUID,
+    booking_in: BookingUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_admin_user),
+):
+    query = (
+        select(Booking)
+        .options(joinedload(Booking.customer))
+        .where(Booking.id == booking_id)
+    )
+    result = await db.execute(query)
+    booking = result.scalars().first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+
+    update_data = booking_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(booking, field, value)
+
+    db.add(booking)
+    await db.commit()
+
+    await db.refresh(booking)
+    await db.execute(select(User).where(User.id == booking.customer_id))
+
+    return booking
 
 
 @router.post(

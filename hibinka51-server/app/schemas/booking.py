@@ -19,6 +19,7 @@ class BookingBase(BaseModel):
     passenger_count: int
     luggage_description: Optional[str] = None
     notes: Optional[str] = None
+    status: Optional[str] = None
 
 
 class BookingCreatePublic(BookingBase):
@@ -63,6 +64,17 @@ class BookingCreatePublic(BookingBase):
         if v < date.today():
             raise ValueError("Дата поездки не может быть в прошлом")
         return v
+    
+class BookingUpdate(BaseModel):
+    """Схема для частичного обновления бронирования"""
+    desired_trip_date: Optional[date] = None
+    desired_departure_time: Optional[time] = None
+    desired_trip_location: Optional[str] = Field(None, max_length=255)
+    arrival_location: Optional[str] = Field(None, max_length=255)
+    passenger_count: Optional[int] = None
+    luggage_description: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[BookingStatus] = None
 
 
 class BookingCustomerResponse(BaseModel):

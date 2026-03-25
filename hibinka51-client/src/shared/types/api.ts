@@ -43,3 +43,19 @@ export interface BookingCreatePublic {
   luggage_description?: string | null;
   notes?: string | null;
 }
+
+export interface Booking {
+  id: string;
+  desired_trip_date: string;
+  desired_departure_time: string;
+  desired_trip_location: string;
+  arrival_location: string;
+  passenger_count: number;
+  status: BookingStatus;
+  customer?: {
+    first_name: string;
+    phone: string;
+  };
+  luggage_description?: string | null;
+  notes?: string | null;
+}

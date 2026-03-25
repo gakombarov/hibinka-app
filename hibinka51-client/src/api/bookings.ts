@@ -1,5 +1,6 @@
 import apiClient from "./client";
 import { BookingFormData } from "@shared/components/ui/BookingForm";
+import { Booking } from "@shared/types/api";
 
 export const submitPublicBooking = async (data: BookingFormData) => {
   const payload = {
@@ -23,5 +24,10 @@ export const fetchAdminBookings = async (skip = 0, limit = 100) => {
   const response = await apiClient.get("/bookings/", {
     params: { skip, limit },
   });
+  return response.data;
+};
+
+export const updateBooking = async (id: string, data: Partial<Booking>) => {
+  const response = await apiClient.patch(`/bookings/${id}`, data);
   return response.data;
 };
