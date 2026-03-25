@@ -50,6 +50,6 @@ jobs:
             cd hibinka-app && \
             git pull origin main && \
             docker compose -f docker-compose.prod.yml pull && \
-            docker compose -f docker-compose.prod.yml up -d --force-recreate server client && \
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans server client && \
             docker image prune -f && \
             docker compose -f docker-compose.prod.yml exec -T server alembic upgrade head
