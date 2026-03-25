@@ -33,6 +33,8 @@ jobs:
           context: ./hibinka51-client
           file: ./hibinka51-client/Dockerfile.client
           push: true
+          build-args: |
+            VITE_API_URL=https://hibinka51.ru
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:latest
 
   deploy:
