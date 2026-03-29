@@ -4,12 +4,16 @@ from fastapi import APIRouter, Depends, status, BackgroundTasks, HTTPException
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking, BookingSource, BookingStatus
 from app.models.user import User, UserRole
 from app.schemas.booking import BookingCreatePublic, BookingResponse, BookingUpdate
+from app.models.trip import Trip, TripStatus, PaymentStatus
+from app.schemas.booking import BookingConfirm
+from app.schemas.trip import TripResponse
 
 router = APIRouter()
 
@@ -120,3 +124,56 @@ async def read_bookings(
     )
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.post("/{booking_id}/confirm", response_model=TripResponse)
+async def convert_booking_to_trip(
+    booking_id: UUID, confirm_data: BookingConfirm, db: AsyncSession = Depends(get_db)
+):
+    """Перенос Заявки в Журнал Поездок с указанием финансов"""
+
+    query = select(Booking).where(Booking.id == booking_id)
+    result = await db.execute(query)
+    booking = result.scalars().first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    if booking.status == BookingStatus.CONFIRMED:
+        raise HTTPException(status_code=400, detail="Уже в журнале")
+
+    new_trip = Trip(
+        customer_id=booking.customer_id,
+        trip_date=booking.desired_trip_date,
+        departure_time=booking.desired_departure_time,
+        departure_location=booking.desired_trip_location,
+        arrival_location=booking.arrival_location,
+        passenger_count=booking.passenger_count,
+        luggage_description=booking.luggage_description,
+        notes=booking.notes,
+        total_amount=confirm_data.total_amount,
+        paid_amount=confirm_data.paid_amount,
+        status=TripStatus.PLANNED,
+        payment_status=PaymentStatus.PAID
+        if confirm_data.paid_amount >= confirm_data.total_amount
+        else PaymentStatus.PENDING,
+        is_regular=False,
+    )
+    db.add(new_trip)
+
+    booking.status = BookingStatus.CONFIRMED
+    booking.total_amount = confirm_data.total_amount
+    booking.paid_amount = confirm_data.paid_amount
+
+    await db.commit()
+
+    booking.status = BookingStatus.CONFIRMED
+    booking.total_amount = confirm_data.total_amount
+    booking.paid_amount = confirm_data.paid_amount
+
+    await db.commit()
+
+    stmt = select(Trip).options(selectinload(Trip.stops)).where(Trip.id == new_trip.id)
+    result = await db.execute(stmt)
+    full_trip = result.scalars().first()
+
+    return full_trip

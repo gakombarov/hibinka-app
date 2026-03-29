@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload  # <--- ВАЖНЫЙ ИМПОРТ
 from typing import List
 from datetime import date
 from uuid import UUID
@@ -19,11 +20,10 @@ async def get_trips_for_landing(
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Получить расписание регулярных рейсов для ЛЭНДИНГА на определенную дату.
-    """
+    """Получить расписание регулярных рейсов для ЛЭНДИНГА на определенную дату."""
     query = (
         select(Trip)
+        .options(selectinload(Trip.stops))
         .where(
             Trip.is_regular == True,
             Trip.trip_date == target_date,
@@ -33,7 +33,6 @@ async def get_trips_for_landing(
     )
 
     result = await db.execute(query)
-
     return result.scalars().all()
 
 
@@ -41,10 +40,12 @@ async def get_trips_for_landing(
 async def update_trip_status(
     trip_id: UUID, status_update: TripDriverUpdate, db: AsyncSession = Depends(get_db)
 ):
-    """
-    Эндпоинт для ВОДИТЕЛЯ.
-    """
-    query = select(Trip).where(Trip.id == trip_id, Trip.is_deleted == False)
+    """Эндпоинт для ВОДИТЕЛЯ."""
+    query = (
+        select(Trip)
+        .options(selectinload(Trip.stops))
+        .where(Trip.id == trip_id, Trip.is_deleted == False)
+    )
     result = await db.execute(query)
     trip = result.scalars().first()
 
@@ -55,15 +56,12 @@ async def update_trip_status(
 
     await db.commit()
     await db.refresh(trip)
-
     return trip
 
 
 @router.post("/", response_model=TripResponse)
 async def create_trip(trip_in: TripCreate, db: AsyncSession = Depends(get_db)):
-    """
-    Создание новой поездки в Журнале.
-    """
+    """Создание новой поездки в Журнале."""
     trip_data = trip_in.model_dump(exclude={"stops"})
     db_trip = Trip(**trip_data)
     db.add(db_trip)
@@ -76,18 +74,23 @@ async def create_trip(trip_in: TripCreate, db: AsyncSession = Depends(get_db)):
         db.add(db_stop)
 
     await db.commit()
-    await db.refresh(db_trip)
-    return db_trip
+    query = select(Trip).options(selectinload(Trip.stops)).where(Trip.id == db_trip.id)
+    result = await db.execute(query)
+    return result.scalars().first()
 
 
 @router.get("/", response_model=List[TripResponse])
 async def get_all_trips(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
-    """
-    Просмотр всего Журнала (для вывода таблицы в Дашборде).
-    """
-    query = select(Trip).where(Trip.is_deleted == False).offset(skip).limit(limit)
+    """Просмотр всего Журнала (для вывода таблицы в Дашборде)."""
+    query = (
+        select(Trip)
+        .options(selectinload(Trip.stops))
+        .where(Trip.is_deleted == False)
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -96,10 +99,12 @@ async def get_all_trips(
 async def update_trip(
     trip_id: UUID, trip_in: TripUpdate, db: AsyncSession = Depends(get_db)
 ):
-    """
-    Редактирование поездки.
-    """
-    query = select(Trip).where(Trip.id == trip_id, Trip.is_deleted == False)
+    """Редактирование поездки."""
+    query = (
+        select(Trip)
+        .options(selectinload(Trip.stops))
+        .where(Trip.id == trip_id, Trip.is_deleted == False)
+    )
     result = await db.execute(query)
     trip = result.scalars().first()
 

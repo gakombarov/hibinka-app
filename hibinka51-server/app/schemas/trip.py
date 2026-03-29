@@ -91,8 +91,8 @@ class TripUpdate(BaseModel):
     arrival_location: Optional[str] = None
 
     status: Optional[TripStatus] = None
-    planned_amount: Optional[float] = None
-    actual_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+    paid_amount: Optional[float] = None
     payment_status: Optional[PaymentStatus] = None
     notes: Optional[str] = None
 
