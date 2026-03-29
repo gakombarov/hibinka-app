@@ -31,3 +31,16 @@ export const updateBooking = async (id: string, data: Partial<Booking>) => {
   const response = await apiClient.patch(`/bookings/${id}`, data);
   return response.data;
 };
+
+export const confirmBookingToTrip = async (
+  bookingId: string,
+  total_amount: number,
+  paid_amount: number,
+) => {
+  const payload = { total_amount, paid_amount };
+  const response = await apiClient.post(
+    `/bookings/${bookingId}/confirm`,
+    payload,
+  );
+  return response.data;
+};

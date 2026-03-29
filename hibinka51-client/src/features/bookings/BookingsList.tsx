@@ -24,6 +24,7 @@ import SearchIcon from "@mui/icons-material/Search";
 
 import { fetchAdminBookings, updateBooking } from "../.././api/bookings";
 import { Booking } from "@shared/types/api";
+import { ConfirmBookingModal } from "./ConfirmBookingModal";
 
 const getStatusChip = (status: string) => {
   switch (status) {
@@ -45,6 +46,11 @@ export const BookingsList = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -236,6 +242,7 @@ export const BookingsList = () => {
                           <MenuItem
                             key={key}
                             value={key}
+                            disabled={key === "CONFIRMED"}
                             sx={{
                               fontSize: "0.8125rem",
                               color: style.color,
@@ -250,17 +257,37 @@ export const BookingsList = () => {
                     </FormControl>
                   </TableCell>
                   <TableCell align="right">
-                    {/* КНОПКА ОТКРЫТЬ*/}
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      color="primary"
-                      onClick={() =>
-                        navigate(`/dashboard/bookings/${booking.id}`)
-                      }
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        justifyContent: "flex-end",
+                      }}
                     >
-                      Открыть
-                    </Button>
+                      {booking.status === "NEW" && (
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          onClick={() => {
+                            setSelectedBookingId(booking.id);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          Сформировать
+                        </Button>
+                      )}
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                        onClick={() =>
+                          navigate(`/dashboard/bookings/${booking.id}`)
+                        }
+                      >
+                        Детали
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -268,6 +295,14 @@ export const BookingsList = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <ConfirmBookingModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        bookingId={selectedBookingId}
+        onSuccess={() => {
+          fetchAdminBookings().then((data) => setBookings(data));
+        }}
+      />
     </Box>
   );
 };
