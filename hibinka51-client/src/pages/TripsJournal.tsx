@@ -1,313 +1,422 @@
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { useForm, Controller } from "react-hook-form";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
   CircularProgress,
+  Alert,
+  Chip,
+  IconButton,
+  Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Badge,
+  Paper,
   Grid,
+  Divider,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-import dayjs from "dayjs";
-import "dayjs/locale/ru";
-
-import type { RootState } from "../store/store";
-import { tripsApi, type Trip, type TripCreate } from "../api/trips";
-
-import { Button } from "@shared/components/ui/Button";
-import { InputField } from "@shared/components/ui/InputField";
-import { Modal } from "@shared/components/ui/Modal";
-
-const formatDateToRU = (dateString: string) => {
-  if (!dateString) return "";
-  const [year, month, day] = dateString.split("-");
-  return `${day}.${month}.${year}`;
-};
+import { fetchAdminTrips } from "../api/trips";
+import { TripResponse } from "@shared/types/api";
 
 export const TripsJournal = () => {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const [trips, setTrips] = useState<TripResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  const token = useSelector((state: RootState) => state.auth.token);
-
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<TripCreate>({
-    defaultValues: {
-      trip_date: dayjs().format("YYYY-MM-DD"),
-      departure_time: "12:00",
-      departure_location: "",
-      arrival_location: "",
-      passenger_count: 1,
-      planned_amount: 0,
-      is_regular: false,
-    },
-  });
-
-  const fetchTrips = async () => {
-    if (!token) return;
-    try {
-      const data = await tripsApi.getAllTrips(0, 100);
-      setTrips(data);
-    } catch (error) {
-      console.error("Ошибка загрузки:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTrips();
-  }, [token]);
-
-  const onSubmit = async (data: TripCreate) => {
-    if (!token) return;
-    try {
-      await tripsApi.createTrip(token, data);
-      setIsAddModalOpen(false);
-      reset();
-      fetchTrips();
-    } catch (error) {
-      console.error("Ошибка при создании:", error);
-      alert("Не удалось создать поездку.");
-    }
-  };
+    const loadTrips = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchAdminTrips();
+        setTrips(data);
+        setError(null);
+      } catch (err) {
+        setError("Не удалось загрузить журнал поездок");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadTrips();
+  }, []);
 
   if (isLoading)
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
         <CircularProgress />
       </Box>
     );
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  const groupedTrips = trips.reduce(
+    (acc, trip) => {
+      const date = trip.trip_date;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(trip);
+      return acc;
+    },
+    {} as Record<string, TripResponse[]>,
+  );
+
+  const sortedDates = Object.keys(groupedTrips).sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+  );
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ru">
-      <Box sx={{ p: 4, height: "100%" }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-          <Box>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Журнал поездок
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Управление регулярными рейсами и трансферами
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            onClick={() => setIsAddModalOpen(true)}
-            sx={{ display: "flex", gap: 1 }}
-          >
-            <AddIcon fontSize="small" /> Добавить поездку
-          </Button>
-        </Box>
-
-        <TableContainer
-          component={Paper}
-          sx={{ borderRadius: "12px", boxShadow: 2 }}
-        >
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead sx={{ bgcolor: "background.default" }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: "bold" }}>Дата</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Время</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Маршрут</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Тип</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Пассажиры</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Водитель</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Статус</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {trips.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                    Нет поездок
-                  </TableCell>
-                </TableRow>
-              ) : (
-                trips.map((trip) => (
-                  <TableRow key={trip.id} hover>
-                    <TableCell>{formatDateToRU(trip.trip_date)}</TableCell>
-                    <TableCell>{trip.departure_time.substring(0, 5)}</TableCell>
-                    <TableCell>
-                      {trip.departure_location} — {trip.arrival_location}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={trip.is_regular ? "Регулярный" : "Трансфер"}
-                        color={trip.is_regular ? "primary" : "default"}
-                        variant={trip.is_regular ? "filled" : "outlined"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{trip.passenger_count}</TableCell>
-                    <TableCell>
-                      {trip.driver_id ? (
-                        "Назначен"
-                      ) : (
-                        <Typography color="error" variant="body2">
-                          Не назначен
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={trip.display_status || trip.status}
-                        color={
-                          trip.status === "PLANNED"
-                            ? "warning"
-                            : trip.status === "COMPLETED"
-                              ? "success"
-                              : "info"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <Modal
-          open={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          title="Новая поездка"
-        >
-          <Box
-            component="form"
-            onSubmit={handleSubmit(onSubmit)}
-            sx={{ py: 2, display: "flex", flexDirection: "column", gap: 3 }}
-          >
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="trip_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      label="Дата поездки"
-                      format="DD.MM.YYYY"
-                      value={dayjs(field.value)}
-                      onChange={(newValue) => {
-                        if (newValue)
-                          field.onChange(newValue.format("YYYY-MM-DD"));
-                      }}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="departure_time"
-                  control={control}
-                  render={({ field, fieldState: { error } }) => (
-                    <TimePicker
-                      label="Время отправления"
-                      ampm={false}
-                      format="HH:mm"
-                      value={
-                        field.value ? dayjs(`2000-01-01T${field.value}`) : null
-                      }
-                      onChange={(newValue) => {
-                        if (newValue) field.onChange(newValue.format("HH:mm"));
-                      }}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          error: !!error,
-                          helperText: error?.message,
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="departure_location"
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <InputField
-                      {...field}
-                      label="Откуда"
-                      placeholder="Мурманск"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="arrival_location"
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <InputField {...field} label="Куда" placeholder="Кировск" />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="passenger_count"
-                  control={control}
-                  render={({ field }) => (
-                    <InputField {...field} label="Пассажиры" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <Controller
-                  name="planned_amount"
-                  control={control}
-                  render={({ field }) => (
-                    <InputField
-                      {...field}
-                      label="Стоимость (₽)"
-                      type="number"
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
-
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              fullWidth
-              isLoading={isSubmitting}
-            >
-              Сохранить поездку
-            </Button>
-          </Box>
-        </Modal>
+    <Box sx={{ maxWidth: 1000, mx: "auto", pb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold">
+          Журнал поездок
+        </Typography>
+        <Button variant="contained" color="primary" size="small">
+          + Добавить рейс
+        </Button>
       </Box>
-    </LocalizationProvider>
+
+      {sortedDates.length === 0 ? (
+        <Typography color="text.secondary" align="center" sx={{ mt: 4 }}>
+          Журнал пока пуст.
+        </Typography>
+      ) : (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {sortedDates.map((date) => {
+            const dayTrips = groupedTrips[date];
+            dayTrips.sort((a, b) =>
+              a.departure_time.localeCompare(b.departure_time),
+            );
+
+            return (
+              <Accordion
+                key={date}
+                defaultExpanded={date === sortedDates[0]}
+                sx={{
+                  borderRadius: "12px !important",
+                  "&:before": { display: "none" },
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                }}
+              >
+                {/* ШАПКА ДНЯ */}
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="primary.dark"
+                    >
+                      {date}
+                    </Typography>
+                    <Badge
+                      badgeContent={dayTrips.length}
+                      color="primary"
+                      sx={{ ml: 2 }}
+                    />
+                  </Box>
+                </AccordionSummary>
+
+                <AccordionDetails
+                  sx={{ bgcolor: "grey.50", p: { xs: 1, sm: 2 } }}
+                >
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {dayTrips.map((trip) => {
+                      const totalAmount = Number(trip.total_amount) || 0;
+                      const paidAmount = Number(trip.paid_amount) || 0;
+                      const debt = totalAmount - paidAmount;
+
+                      const isPaid = debt <= 0 && totalAmount > 0;
+                      const isCompleted = trip.status === "COMPLETED";
+
+                      return (
+                        <Paper
+                          key={trip.id}
+                          elevation={0}
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "grey.300",
+                            borderRadius: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {/* ВЕРХНЯЯ ПАНЕЛЬ: Время и Статусы */}
+                          <Box
+                            sx={{
+                              bgcolor: isCompleted ? "success.50" : "grey.100",
+                              p: 1.5,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              borderBottom: "1px solid",
+                              borderColor: "grey.200",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              <Typography
+                                variant="h6"
+                                fontWeight="bold"
+                                color="primary.main"
+                              >
+                                {trip.departure_time.substring(0, 5)}
+                              </Typography>
+
+                              {/* Индикаторы "Выполнено" и "Оплачено" */}
+                              <Box sx={{ display: "flex", gap: 1 }}>
+                                {isCompleted ? (
+                                  <Chip
+                                    size="small"
+                                    icon={<CheckCircleOutlineIcon />}
+                                    label="Выполнено"
+                                    color="success"
+                                  />
+                                ) : (
+                                  <Chip
+                                    size="small"
+                                    label={
+                                      trip.display_status || "Запланировано"
+                                    }
+                                    variant="outlined"
+                                  />
+                                )}
+                                {isPaid && (
+                                  <Chip
+                                    size="small"
+                                    label="Оплачено"
+                                    color="success"
+                                    variant="outlined"
+                                    sx={{ bgcolor: "white" }}
+                                  />
+                                )}
+                              </Box>
+                            </Box>
+
+                            <IconButton size="small" color="primary">
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+
+                          {/* ОСНОВНОЕ ТЕЛО КАРТОЧКИ (Сетка данных) */}
+                          <Box sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                              {/* КОЛОНКА 1: Маршрут и Клиент */}
+                              <Grid item xs={12} md={4}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  display="block"
+                                >
+                                  Откуда — Куда
+                                </Typography>
+                                <Typography
+                                  variant="body1"
+                                  fontWeight="bold"
+                                  sx={{ mb: 1 }}
+                                >
+                                  {trip.departure_location} —{" "}
+                                  {trip.arrival_location}
+                                </Typography>
+
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  display="block"
+                                >
+                                  Заказчик / Клиент
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  {/* TODO: Сюда потом выведем реальное имя из БД */}
+                                  <span
+                                    style={{
+                                      color: "#9e9e9e",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    Данные клиента (скоро)
+                                  </span>
+                                </Typography>
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Пассажиров:{" "}
+                                  <Box
+                                    component="span"
+                                    fontWeight="bold"
+                                    color="text.primary"
+                                  >
+                                    {trip.passenger_count || 0}
+                                  </Box>
+                                </Typography>
+                                {trip.luggage_description && (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Багаж:{" "}
+                                    <Box
+                                      component="span"
+                                      fontWeight="bold"
+                                      color="text.primary"
+                                    >
+                                      {trip.luggage_description}
+                                    </Box>
+                                  </Typography>
+                                )}
+                              </Grid>
+
+                              {/* КОЛОНКА 2: Исполнители (Плейсхолдеры) */}
+                              <Grid item xs={12} md={4}>
+                                <Box
+                                  sx={{
+                                    p: 1.5,
+                                    bgcolor: "grey.50",
+                                    borderRadius: 1,
+                                    height: "100%",
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Назначенный водитель
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      mb: 1.5,
+                                      color: "text.secondary",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    {/* TODO: Заменить на trip.driver_id когда прикрутим водителей */}
+                                    Не назначен
+                                  </Typography>
+
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Назначенный транспорт
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: "text.secondary",
+                                      fontStyle: "italic",
+                                    }}
+                                  >
+                                    Не назначен
+                                  </Typography>
+                                </Box>
+                              </Grid>
+
+                              {/* КОЛОНКА 3: Бухгалтерия */}
+                              <Grid item xs={12} md={4}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 0.5,
+                                    h: "100%",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      Цена (Итого):
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      {totalAmount} ₽
+                                    </Typography>
+                                  </Box>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      Внесенный аванс:
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {paidAmount} ₽
+                                    </Typography>
+                                  </Box>
+
+                                  <Divider sx={{ my: 0.5 }} />
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                      color={
+                                        debt > 0 ? "error.main" : "text.primary"
+                                      }
+                                    >
+                                      Сумма к оплате (Долг):
+                                    </Typography>
+                                    <Typography
+                                      variant="h6"
+                                      fontWeight="bold"
+                                      color={
+                                        debt > 0 ? "error.main" : "success.main"
+                                      }
+                                    >
+                                      {debt > 0 ? `${debt} ₽` : "0 ₽"}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Grid>
+                            </Grid>
+                          </Box>
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            );
+          })}
+        </Box>
+      )}
+    </Box>
   );
 };

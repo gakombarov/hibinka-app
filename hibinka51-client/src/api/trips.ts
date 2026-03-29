@@ -1,18 +1,5 @@
 import apiClient from "./client";
-
-export interface Trip {
-  id: string | number;
-  trip_date: string;
-  departure_time: string;
-  departure_location: string;
-  arrival_location: string;
-  is_regular: boolean;
-  status: string;
-  display_status?: string;
-  passenger_count: number;
-  planned_amount: number;
-  driver_id?: string | number | null;
-}
+import { TripResponse } from "@shared/types/api";
 
 export interface TripCreate {
   trip_date: string;
@@ -20,21 +7,32 @@ export interface TripCreate {
   departure_location: string;
   arrival_location: string;
   is_regular?: boolean;
-  planned_amount?: number;
   passenger_count?: number;
+
+  total_amount?: number;
+  paid_amount?: number;
+
   notes?: string;
 }
 
 export const tripsApi = {
-  getAllTrips: async (skip = 0, limit = 100): Promise<Trip[]> => {
+  /**
+   * Получить список всех поездок (для Журнала)
+   */
+  getAll: async (skip = 0, limit = 100): Promise<TripResponse[]> => {
     const response = await apiClient.get("/trips/", {
       params: { skip, limit },
     });
     return response.data;
   },
 
-  createTrip: async (tripData: TripCreate): Promise<Trip> => {
+  /**
+   * Создать новую поездку вручную
+   */
+  create: async (tripData: TripCreate): Promise<TripResponse> => {
     const response = await apiClient.post("/trips/", tripData);
     return response.data;
   },
 };
+
+export const fetchAdminTrips = tripsApi.getAll;
