@@ -39,8 +39,8 @@ services:
       - client_node_modules:/workspace/hibinka51-client/node_modules
       - venv_data:/workspace/.venv
     ports:
-      - "8000:8000" # FastAPI
-      - "5173:5173" # Client
+      - "8000:8000" 
+      - "5173:5173" 
     networks:
       - hibinka-dev
     command: sleep infinity
