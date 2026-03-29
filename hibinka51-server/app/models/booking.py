@@ -2,6 +2,7 @@ import enum
 from datetime import date, time
 from sqlalchemy import (
     Column,
+    DECIMAL,
     String,
     Integer,
     Date,
@@ -97,6 +98,10 @@ class Booking(IsDeletedModel):
         nullable=True,
         comment="Дополнительные заметки и пожелания",
     )
+
+    total_amount = Column(DECIMAL(10, 2), nullable=True, default=0, comment="Итого")
+
+    paid_amount = Column(DECIMAL(10, 2), nullable=True, default=0, comment="Выплачено")
 
     customer = relationship("User", backref="bookings")
 

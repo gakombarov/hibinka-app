@@ -64,9 +64,11 @@ class BookingCreatePublic(BookingBase):
         if v < date.today():
             raise ValueError("Дата поездки не может быть в прошлом")
         return v
-    
+
+
 class BookingUpdate(BaseModel):
     """Схема для частичного обновления бронирования"""
+
     desired_trip_date: Optional[date] = None
     desired_departure_time: Optional[time] = None
     desired_trip_location: Optional[str] = Field(None, max_length=255)
@@ -99,3 +101,8 @@ class BookingResponse(BookingBase):
 
     class Config:
         from_attributes = True
+
+
+class BookingConfirm(BaseModel):
+    total_amount: float = Field(..., description="Итоговая цена поездки")
+    paid_amount: float = Field(0.0, description="Уже выплачено (аванс)")

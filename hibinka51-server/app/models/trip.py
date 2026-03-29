@@ -49,36 +49,47 @@ class Trip(IsDeletedModel):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
 
-    vehicle_id = Column(
-        UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=True
-    )
-    driver_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
-    )
+    # vehicle_id = Column(
+    #     UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=True
+    # )
+
+    # driver_id = Column(
+    #     UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    # )
 
     trip_date = Column(Date, nullable=False, comment="Дата поездки")
+
     departure_time = Column(Time, nullable=False, comment="Время старта")
+
     departure_location = Column(String(255), nullable=False)
+
     arrival_location = Column(String(255), nullable=False)
-    passenger_count = Column(Integer, nullable=False, default=0,
-                             comment='Количество пассжаиров')
+
+    passenger_count = Column(
+        Integer, nullable=False, default=0, comment="Количество пассжаиров"
+    )
 
     is_regular = Column(
         Boolean, default=False, comment="Это регулярный маршрут (госконтракт)?"
     )
-    status = Column(SQLEnum(TripStatus),
-                    default=TripStatus.PLANNED, nullable=False)
+    status = Column(SQLEnum(TripStatus), default=TripStatus.PLANNED, nullable=False)
 
-    planned_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
-    actual_amount = Column(DECIMAL(10, 2), nullable=True, default=0)
+    total_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
+
+    paid_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
+
+    luggage_description = Column(Text, nullable=True)
+
     payment_status = Column(
         SQLEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False
     )
+
     show_on_landing = Column(
         Boolean, default=False, nullable=False, comment="Показывать ли поездку на сайте"
     )
 
     notes = Column(Text, nullable=True)
+
     stops = relationship(
         "TripStop",
         back_populates="trip",
@@ -86,11 +97,15 @@ class Trip(IsDeletedModel):
         order_by="TripStop.stop_order",
     )
 
-    @validates('passenger_count')
+    @validates("passenger_count")
     def validate_passagers_count(self, key, passenger_count):
         if passenger_count <= 0:
             raise ValueError("Должны быть пассажиры")
         return passenger_count
+
+    @property
+    def remaining_amount(self):
+        return float(self.total_amount) - float(self.paid_amount)
 
 
 class TripStop(IsDeletedModel):
