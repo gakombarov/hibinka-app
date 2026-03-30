@@ -100,11 +100,7 @@ async def update_trip(
     trip_id: UUID, trip_in: TripUpdate, db: AsyncSession = Depends(get_db)
 ):
     """Редактирование поездки."""
-    query = (
-        select(Trip)
-        .options(selectinload(Trip.stops))
-        .where(Trip.id == trip_id, Trip.is_deleted == False)
-    )
+    query = select(Trip).options(selectinload(Trip.stops)).where(Trip.id == trip_id)
     result = await db.execute(query)
     trip = result.scalars().first()
 

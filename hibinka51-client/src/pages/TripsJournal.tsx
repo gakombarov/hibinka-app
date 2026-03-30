@@ -21,25 +21,29 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 import { fetchAdminTrips } from "../api/trips";
 import { TripResponse } from "@shared/types/api";
+import { TripFormModal } from "../features/trips/TripFormModal";
 
 export const TripsJournal = () => {
   const [trips, setTrips] = useState<TripResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<TripResponse | null>(null);
+
+  const loadTrips = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchAdminTrips();
+      setTrips(data);
+      setError(null);
+    } catch (err) {
+      setError("Не удалось загрузить журнал поездок");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadTrips = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchAdminTrips();
-        setTrips(data);
-        setError(null);
-      } catch (err) {
-        setError("Не удалось загрузить журнал поездок");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadTrips();
   }, []);
 
@@ -78,7 +82,15 @@ export const TripsJournal = () => {
         <Typography variant="h5" fontWeight="bold">
           Журнал поездок
         </Typography>
-        <Button variant="contained" color="primary" size="small">
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => {
+            setEditingTrip(null);
+            setIsModalOpen(true);
+          }}
+        >
           + Добавить рейс
         </Button>
       </Box>
@@ -205,7 +217,14 @@ export const TripsJournal = () => {
                               </Box>
                             </Box>
 
-                            <IconButton size="small" color="primary">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => {
+                                setEditingTrip(trip);
+                                setIsModalOpen(true);
+                              }}
+                            >
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Box>
@@ -402,6 +421,13 @@ export const TripsJournal = () => {
                                     >
                                       {debt > 0 ? `${debt} ₽` : "0 ₽"}
                                     </Typography>
+                                    {/* МОДАЛКА СОЗДАНИЯ И РЕДАКТИРОВАНИЯ */}
+                                    <TripFormModal
+                                      open={isModalOpen}
+                                      onClose={() => setIsModalOpen(false)}
+                                      tripToEdit={editingTrip}
+                                      onSuccess={loadTrips} 
+                                    />
                                   </Box>
                                 </Box>
                               </Grid>
