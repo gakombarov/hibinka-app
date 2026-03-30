@@ -33,6 +33,14 @@ export const tripsApi = {
     const response = await apiClient.post("/trips/", tripData);
     return response.data;
   },
+
+  update: async (
+    id: string,
+    tripData: Partial<TripCreate>,
+  ): Promise<TripResponse> => {
+    const response = await apiClient.put(`/trips/${id}`, tripData);
+    return response.data;
+  },
 };
 
 export const fetchAdminTrips = tripsApi.getAll;

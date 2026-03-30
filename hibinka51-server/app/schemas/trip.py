@@ -19,8 +19,10 @@ class TripBase(BaseModel):
 
     is_regular: bool = False
     status: TripStatus = TripStatus.PLANNED
-    planned_amount: float = 0.0
-    actual_amount: Optional[float] = None
+
+    total_amount: float = 0.0
+    paid_amount: float = 0.0
+
     payment_status: PaymentStatus = PaymentStatus.PENDING
     show_on_landing: bool = False
     notes: Optional[str] = None
@@ -53,6 +55,8 @@ class TripResponse(TripBase):
     scheduled_trip_id: Optional[UUID] = None
     stops: List[TripStopBase] = []
 
+    remaining_amount: float
+
     model_config = ConfigDict(from_attributes=True)
 
     @computed_field
@@ -68,6 +72,7 @@ class TripResponse(TripBase):
         elif self.status == TripStatus.CANCELLED:
             return "Отменен"
 
+        # Если понадобится логика задержки, можно раскомментировать:
         # if self.status == TripStatus.PLANNED:
         #     trip_datetime = datetime.combine(self.trip_date, self.departure_time)
         #     if datetime.now() > trip_datetime:
@@ -91,8 +96,10 @@ class TripUpdate(BaseModel):
     arrival_location: Optional[str] = None
 
     status: Optional[TripStatus] = None
+
     total_amount: Optional[float] = None
     paid_amount: Optional[float] = None
+
     payment_status: Optional[PaymentStatus] = None
     notes: Optional[str] = None
 
