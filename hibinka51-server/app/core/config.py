@@ -6,7 +6,15 @@ class Settings(BaseSettings):
     """App Settings for Hibinka51"""
 
     # --- Database ---
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@db:5432/hibinka_db"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
+    DB_HOST: str = "db"
+    DB_PORT: int = 5432
+    DB_NAME: str = "hibinka_db"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     # --- JWT & Auth ---
     SECRET_KEY: str = "temporary_secret_key_for_development_only"
