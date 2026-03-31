@@ -16,9 +16,8 @@ services:
   db:
     image: postgres:15-alpine
     container_name: hibinka-db
-    ports:
-      - "5432:5432"
     restart: always
+    env_file: .env 
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
