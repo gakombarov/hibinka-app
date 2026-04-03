@@ -3,9 +3,16 @@ import authReducer from "./authSlice";
 
 const loadState = () => {
   try {
-    const serializedState = localStorage.getItem("auth_state");
-    if (serializedState === null) return undefined;
-    return JSON.parse(serializedState) as { auth: any }; // Явно указываем структуру
+    const serializedUser = localStorage.getItem("auth_user");
+    if (serializedUser === null) return undefined;
+
+    return {
+      auth: {
+        token: localStorage.getItem("token"),
+        refreshToken: localStorage.getItem("refresh_token"),
+        user: JSON.parse(serializedUser),
+      },
+    };
   } catch (err) {
     return undefined;
   }
@@ -21,7 +28,11 @@ export const store = configureStore({
 store.subscribe(() => {
   try {
     const state = store.getState();
-    localStorage.setItem("auth_state", JSON.stringify({ auth: state.auth }));
+    if (state.auth.user) {
+      localStorage.setItem("auth_user", JSON.stringify(state.auth.user));
+    } else {
+      localStorage.removeItem("auth_user");
+    }
   } catch (e) {
     console.error(e);
   }

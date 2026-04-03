@@ -28,13 +28,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setApiError(null);
 
     try {
-      const { access_token } = await authApi.login(data.email, data.password);
+      const { access_token, refresh_token } = await authApi.login(
+        data.email,
+        data.password,
+      );
 
       localStorage.setItem("token", access_token);
+      localStorage.setItem("refresh_token", refresh_token);
 
       const user = await authApi.getMe();
 
-      dispatch(setCredentials({ user, token: access_token }));
+      dispatch(
+        setCredentials({
+          user,
+          token: access_token,
+          refreshToken: refresh_token,
+        }),
+      );
 
       onLoginSuccess();
     } catch (error: any) {

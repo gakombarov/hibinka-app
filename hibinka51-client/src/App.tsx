@@ -59,6 +59,9 @@ const AppContent = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+
     dispatch(logout());
     navigate("/");
   };

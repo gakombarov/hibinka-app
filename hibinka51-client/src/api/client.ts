@@ -12,13 +12,51 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
-
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error) => Promise.reject(error),
+);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      const refreshToken = localStorage.getItem("refresh_token");
+
+      if (refreshToken) {
+        try {
+          const response = await axios.post(
+            `${BASE_URL}/api/v1/auth/refresh?refresh_token=${refreshToken}`,
+          );
+
+          const { access_token, refresh_token: new_refresh } = response.data;
+
+          localStorage.setItem("token", access_token);
+          if (new_refresh) {
+            localStorage.setItem("refresh_token", new_refresh);
+          }
+
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          return apiClient(originalRequest);
+        } catch (refreshError) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+          return Promise.reject(refreshError);
+        }
+      } else {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
+    }
+
     return Promise.reject(error);
   },
 );
