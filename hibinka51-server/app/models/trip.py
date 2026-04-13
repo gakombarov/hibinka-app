@@ -10,7 +10,6 @@ from sqlalchemy import (
     Enum as SQLEnum,
     Integer,
     Boolean,
-    DECIMAL,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, validates
@@ -19,15 +18,11 @@ from app.models.base import IsDeletedModel
 
 
 class PaymentStatus(str, enum.Enum):
-    """Статусы оплаты за поездку"""
-
     PENDING = "PENDING"
     PAID = "PAID"
 
 
 class TripStatus(str, enum.Enum):
-    """Статусы поездок"""
-
     PLANNED = "PLANNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -35,59 +30,59 @@ class TripStatus(str, enum.Enum):
 
 
 class Trip(IsDeletedModel):
-    """Модель для хранения информации о поездках"""
-
     __tablename__ = "trips"
 
+    # --- Связи ---
     scheduled_trip_id = Column(
         UUID(as_uuid=True),
         ForeignKey("scheduled_trips.id", ondelete="SET NULL"),
         nullable=True,
     )
-
     customer_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
+    customer = relationship("User", foreign_keys=[customer_id])
+
+    booking_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=True,
+        comment="Заявка, к которой привязана поездка",
+    )
+    booking = relationship("Booking", back_populates="trips")
 
     # vehicle_id = Column(
-    #     UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=True
+    #     UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="SET NULL"), nullable=True
     # )
-
     # driver_id = Column(
-    #     UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    #     UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     # )
 
+    # --- Маршрут конкретной машины ---
     trip_date = Column(Date, nullable=False, comment="Дата поездки")
-
     departure_time = Column(Time, nullable=False, comment="Время старта")
-
     departure_location = Column(String(255), nullable=False)
-
     arrival_location = Column(String(255), nullable=False)
-
     passenger_count = Column(
-        Integer, nullable=False, default=0, comment="Количество пассжаиров"
+        Integer, nullable=False, default=0, comment="Количество пассажиров в авто"
     )
 
-    is_regular = Column(
-        Boolean, default=False, comment="Это регулярный маршрут (госконтракт)?"
-    )
+    # --- Статусы и флаги ---
+    is_regular = Column(Boolean, default=False, comment="Регулярный маршрут?")
     status = Column(SQLEnum(TripStatus), default=TripStatus.PLANNED, nullable=False)
-
-    total_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
-
-    paid_amount = Column(DECIMAL(10, 2), nullable=False, default=0)
-
-    luggage_description = Column(Text, nullable=True)
-
     payment_status = Column(
         SQLEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False
     )
-
     show_on_landing = Column(
-        Boolean, default=False, nullable=False, comment="Показывать ли поездку на сайте"
+        Boolean, default=False, nullable=False, comment="Показывать на сайте"
     )
-
+    has_trailer = Column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="Необходим ли прицеп",
+    )
     notes = Column(Text, nullable=True)
 
     stops = relationship(
@@ -102,10 +97,6 @@ class Trip(IsDeletedModel):
         if passenger_count <= 0:
             raise ValueError("Должны быть пассажиры")
         return passenger_count
-
-    @property
-    def remaining_amount(self):
-        return float(self.total_amount) - float(self.paid_amount)
 
 
 class TripStop(IsDeletedModel):

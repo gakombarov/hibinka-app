@@ -9,11 +9,11 @@ from sqlalchemy import (
     Time,
     Text,
     ForeignKey,
+    Boolean,
     Enum as SQLEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
 
 from app.models.base import IsDeletedModel
 from app.models.user import User
@@ -43,6 +43,9 @@ class Booking(IsDeletedModel):
         nullable=False,
         comment="Клиент сделавший бронирование",
     )
+    customer = relationship("User", backref="bookings")
+
+    trips = relationship("Trip", back_populates="booking", cascade="all, delete-orphan")
 
     source = Column(
         SQLEnum(BookingSource),
@@ -51,59 +54,51 @@ class Booking(IsDeletedModel):
         comment="Источник заявки",
     )
 
-    desired_trip_date = Column(
-        Date,
+    # --- Маршрут и Время ---
+    desired_trip_date = Column(Date, nullable=False, comment="Дата поездки")
+    desired_departure_time = Column(Time, nullable=False, comment="Время отправления")
+    desired_trip_location = Column(String(255), nullable=False, comment="Откуда")
+    arrival_location = Column(String(255), nullable=False, comment="Куда")
+
+    # --- Обратный рейс ---
+    is_round_trip = Column(
+        Boolean,
+        default=False,
+        server_default="false",
         nullable=False,
-        comment="Дата когда клиент хочет совершить поездку",
+        comment="Обратный рейс",
     )
+    return_date = Column(Date, nullable=True, comment="Дата обратной поездки")
+    return_time = Column(Time, nullable=True, comment="Время обратной поездки")
 
-    desired_departure_time = Column(
-        Time,
-        nullable=False,
-        comment="Время отправления по желанию клиента",
+    # --- Детали заказа ---
+    passenger_count = Column(Integer, nullable=False, comment="Сколько всего человек")
+    luggage_description = Column(Text, nullable=True, comment="Багаж")
+    status = Column(SQLEnum(BookingStatus), default=BookingStatus.NEW, nullable=False)
+    notes = Column(Text, nullable=True, comment="Заметки")
+
+    # --- Финансы (Единый источник истины) ---
+    total_amount = Column(
+        DECIMAL(10, 2), nullable=True, default=0, comment="Итого к оплате"
     )
-
-    desired_trip_location = Column(
-        String(255),
-        nullable=False,
-        comment="Адрес или название пункта отправления",
-    )
-
-    arrival_location = Column(
-        String(255),
-        nullable=False,
-        comment="Адрес или название пункта назначения",
-    )
-
-    passenger_count = Column(
-        Integer,
-        nullable=False,
-        comment="Сколько человек планируют поездку",
-    )
-
-    luggage_description = Column(
-        Text,
-        nullable=True,
-        comment="Информация о количестве и типе багажа",
-    )
-
-    status = Column(
-        SQLEnum(BookingStatus),
-        default=BookingStatus.NEW,
-        nullable=False,
-    )
-
-    notes = Column(
-        Text,
-        nullable=True,
-        comment="Дополнительные заметки и пожелания",
-    )
-
-    total_amount = Column(DECIMAL(10, 2), nullable=True, default=0, comment="Итого")
-
     paid_amount = Column(DECIMAL(10, 2), nullable=True, default=0, comment="Выплачено")
 
-    customer = relationship("User", backref="bookings")
+    @property
+    def unassigned_passengers(self) -> int:
+        """Считает, сколько пассажиров еще не распределено по машинам"""
+        if not self.trips:
+            return self.passenger_count
+
+        assigned = 0
+        for t in self.trips:
+            if (
+                not t.is_deleted
+                and t.status != "CANCELLED"
+                and t.trip_date == self.desired_trip_date
+            ):
+                assigned += self.passenger_count
+        remaining = self.passenger_count - assigned
+        return max(0, remaining)
 
     def __repr__(self):
         return f"<Booking {self.id}>"

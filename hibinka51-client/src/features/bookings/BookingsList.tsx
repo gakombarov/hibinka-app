@@ -1,307 +1,204 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
+  Button,
   CircularProgress,
   Alert,
-  Button,
-  TextField,
-  InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
+  Stack,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 
-import { fetchAdminBookings, updateBooking } from "../.././api/bookings";
-import { Booking } from "@shared/types/api";
-import { ConfirmBookingModal } from "./ConfirmBookingModal";
+import { AppDispatch, RootState } from "../../store/store";
+import { fetchBookingsList } from "../../store/bookingsSlice";
+import { CreateBookingModal } from "./CreateBookingModal";
+import { Booking } from "../../shared/types/api";
 
-const getStatusChip = (status: string) => {
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-");
+  return `${day}.${month}.${year}`;
+};
+
+const getStatusBadge = (status: string) => {
   switch (status) {
     case "NEW":
-      return <Chip label="Новая" color="info" size="small" />;
+      return { label: "Новая", color: "info" as const };
     case "CONFIRMED":
-      return <Chip label="Подтверждена" color="success" size="small" />;
+      return { label: "Сформирована", color: "success" as const };
     case "CANCELLED":
-      return <Chip label="Отменена" color="error" size="small" />;
+      return { label: "Отменена", color: "error" as const };
+    case "COMPLETED":
+      return { label: "Завершена", color: "default" as const };
     default:
-      return <Chip label={status} size="small" />;
+      return { label: status, color: "default" as const };
   }
 };
 
-export const BookingsList = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [searchQuery, setSearchQuery] = useState("");
+export const BookingsList: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
-    null,
-  );
+  const {
+    list: bookings,
+    loading,
+    error,
+  } = useSelector((state: RootState) => state.bookings);
 
   useEffect(() => {
-    const loadBookings = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchAdminBookings();
-        setBookings(data);
-        setError(null);
-      } catch (err) {
-        setError("Не удалось загрузить список заявок");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadBookings();
-  }, []);
+    dispatch(fetchBookingsList({ skip: 0, limit: 100 }));
+  }, [dispatch]);
 
-  const filteredBookings = bookings.filter((booking) => {
-    const nameMatch = booking.customer?.first_name
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const phoneMatch = booking.customer?.phone?.includes(searchQuery);
-    return nameMatch || phoneMatch;
-  });
-
-  if (isLoading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
+  const groupedBookings = useMemo(() => {
+    const grouped = bookings.reduce(
+      (acc, booking) => {
+        const date = booking.desired_trip_date;
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(booking);
+        return acc;
+      },
+      {} as Record<string, Booking[]>,
     );
-  if (error) return <Alert severity="error">{error}</Alert>;
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    try {
-      setBookings((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: newStatus as any } : b)),
-      );
+    const sortedDates = Object.keys(grouped).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
 
-      await updateBooking(id, { status: newStatus as any });
-    } catch (err) {
-      setError("Не удалось обновить статус");
-      const data = await fetchAdminBookings();
-      setBookings(data);
-    }
-  };
+    return { grouped, sortedDates };
+  }, [bookings]);
 
-  const statusStyles: Record<
-    string,
-    { color: string; bgColor: string; label: string }
-  > = {
-    NEW: {
-      label: "Новая",
-      color: "#0288d1",
-      bgColor: "#e1f5fe",
-    },
-    CONFIRMED: {
-      label: "Подтверждена",
-      color: "#2e7d32",
-      bgColor: "#e8f5e9",
-    },
-    IN_PROGRESS: {
-      label: "В работе",
-      color: "#ed6c02",
-      bgColor: "#fff3e0",
-    },
-    COMPLETED: {
-      label: "Завершена",
-      color: "#757575",
-      bgColor: "#f5f5f5",
-    },
-    CANCELLED: {
-      label: "Отменена",
-      color: "#d32f2f",
-      bgColor: "#ffebee",
-    },
-  };
+  if (loading && bookings.length === 0)
+    return <CircularProgress sx={{ display: "block", mx: "auto", mt: 4 }} />;
+  if (error)
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        {error}
+      </Alert>
+    );
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
+    <Box>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
       >
-        <Typography variant="h5" fontWeight="bold">
-          Входящие заявки
+        <Typography variant="h5">Входящие заявки</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          + Ручная заявка
+        </Button>
+      </Stack>
+
+      {bookings.length === 0 && !loading && (
+        <Typography color="textSecondary" align="center">
+          Нет заявок
         </Typography>
+      )}
 
-        {/* ПОЛЕ ПОИСКА */}
-        <TextField
-          size="small"
-          placeholder="Поиск по имени или телефону..."
-          variant="outlined"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ width: 300, bgcolor: "background.paper" }}
-        />
-      </Box>
+      {groupedBookings.sortedDates.map((date) => (
+        <Box key={date} sx={{ mb: 5 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, fontWeight: "bold", color: "primary.main" }}
+          >
+            Заявки на {formatDate(date)}
+          </Typography>
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}
-      >
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: "action.hover" }}>
-            <TableRow>
-              <TableCell>
-                <strong>Дата и Время</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Маршрут</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Клиент</strong>
-              </TableCell>
-              <TableCell align="center">
-                <strong>Пассажиров</strong>
-              </TableCell>
-              <TableCell align="center">
-                <strong>Статус</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>Действия</strong>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredBookings.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  Ничего не найдено
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBookings.map((booking) => (
-                <TableRow key={booking.id} hover>
-                  <TableCell>
-                    {booking.desired_trip_date} <br />
-                    <Typography variant="caption" color="text.secondary">
-                      {booking.desired_departure_time.substring(0, 5)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {booking.desired_trip_location} — {booking.arrival_location}
-                  </TableCell>
-                  <TableCell>
-                    {booking.customer?.first_name || "Клиент"} <br />
-                    <Typography variant="caption" color="text.secondary">
-                      {booking.customer?.phone || "Телефон скрыт"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    {booking.passenger_count}
-                  </TableCell>
-                  <TableCell align="center">
-                    <FormControl size="small" sx={{ minWidth: 150 }}>
-                      <Select
-                        value={booking.status}
-                        onChange={(e) =>
-                          handleStatusChange(booking.id, e.target.value)
-                        }
-                        sx={{
-                          fontSize: "0.8125rem",
-                          fontWeight: "bold",
-                          height: 32,
-                          color: statusStyles[booking.status]?.color,
-                          bgcolor: statusStyles[booking.status]?.bgColor,
-                          "& .MuiOutlinedInput-notchedOutline": {
-                            border: "none",
-                          },
-                          "&:hover .MuiOutlinedInput-notchedOutline": {
-                            border: "none",
-                          },
-                        }}
-                      >
-                        {Object.entries(statusStyles).map(([key, style]) => (
-                          <MenuItem
-                            key={key}
-                            value={key}
-                            disabled={key === "CONFIRMED"}
-                            sx={{
-                              fontSize: "0.8125rem",
-                              color: style.color,
-                              "&.Mui-selected": { bgcolor: style.bgColor },
-                              "&:hover": { bgcolor: style.bgColor },
-                            }}
-                          >
-                            {style.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 1,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      {booking.status === "NEW" && (
-                        <Button
-                          variant="contained"
-                          color="success"
-                          size="small"
-                          onClick={() => {
-                            setSelectedBookingId(booking.id);
-                            setIsModalOpen(true);
-                          }}
-                        >
-                          Сформировать
-                        </Button>
-                      )}
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="primary"
-                        onClick={() =>
-                          navigate(`/dashboard/bookings/${booking.id}`)
-                        }
-                      >
-                        Детали
-                      </Button>
-                    </Box>
-                  </TableCell>
+          <TableContainer component={Paper} elevation={2}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#fafafa" }}>
+                  <TableCell>Код</TableCell>
+                  <TableCell>Клиент</TableCell>
+                  <TableCell>Маршрут</TableCell>
+                  <TableCell>Время</TableCell>
+                  <TableCell>Статус</TableCell>
+                  <TableCell align="right">Действия</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <ConfirmBookingModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        bookingId={selectedBookingId}
-        onSuccess={() => {
-          fetchAdminBookings().then((data) => setBookings(data));
-        }}
+              </TableHead>
+              <TableBody>
+                {groupedBookings.grouped[date].map((booking) => {
+                  const badge = getStatusBadge(booking.status);
+                  return (
+                    <TableRow key={booking.id} hover>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: "monospace", fontWeight: "bold" }}
+                        >
+                          #{booking.id.slice(-4).toUpperCase()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {booking.customer?.first_name || "Без имени"}
+                        <br />
+                        <Typography variant="caption" color="textSecondary">
+                          {booking.customer?.phone}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {booking.desired_trip_location} →{" "}
+                        {booking.arrival_location}
+                        {booking.is_round_trip && (
+                          <Chip
+                            label="Туда-обратно"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <b>{booking.desired_departure_time?.slice(0, 5)}</b>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={badge.label}
+                          color={badge.color}
+                          size="small"
+                          sx={{ fontWeight: "bold" }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() =>
+                            navigate(`/dashboard/bookings/${booking.id}`)
+                          }
+                        >
+                          Детали
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      ))}
+
+      <CreateBookingModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => dispatch(fetchBookingsList({ skip: 0, limit: 100 }))}
       />
     </Box>
   );

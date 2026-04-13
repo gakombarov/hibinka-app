@@ -20,15 +20,19 @@ export interface TripResponse {
   departure_time: string;
   departure_location: string;
   arrival_location: string;
+  passenger_count: number;
   is_regular: boolean;
   status: TripStatus;
-  planned_amount: number;
-  actual_amount: number | null;
   payment_status: PaymentStatus;
   show_on_landing: boolean;
+  has_trailer: boolean;
   notes: string | null;
   stops: TripStop[];
   display_status: string;
+  booking_id: string | null;
+  vehicle_id: string | null;
+  driver_id: string | null;
+  scheduled_trip_id: string | null;
 }
 
 export interface BookingCreatePublic {
@@ -42,6 +46,9 @@ export interface BookingCreatePublic {
   passenger_count: number;
   luggage_description?: string | null;
   notes?: string | null;
+  is_round_trip: boolean;
+  return_date?: string | null;
+  return_time?: string | null;
 }
 
 export interface Booking {
@@ -53,9 +60,24 @@ export interface Booking {
   passenger_count: number;
   status: BookingStatus;
   customer?: {
+    id: string;
     first_name: string;
     phone: string;
+    email: string | null;
   };
   luggage_description?: string | null;
   notes?: string | null;
+  is_round_trip: boolean;
+  return_date?: string | null;
+  return_time?: string | null;
+  total_amount: number;
+  paid_amount: number;
+  trips?: TripResponse[];
+}
+
+export interface BookingConfirm {
+  total_amount: number;
+  paid_amount: number;
+  has_trailer: boolean;
+  notes?: string;
 }

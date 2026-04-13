@@ -1,17 +1,20 @@
 from datetime import date, time
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    field_validator,
+    ConfigDict,
+)
 import re
 
 from app.models.booking import BookingSource, BookingStatus
+from app.schemas.trip import TripResponse
 
 
 class BookingBase(BaseModel):
-    """
-    Базовая схема с общими полями для бронирования.
-    """
-
     desired_trip_date: date
     desired_departure_time: time
     desired_trip_location: str = Field(..., max_length=255)
@@ -19,12 +22,16 @@ class BookingBase(BaseModel):
     passenger_count: int
     luggage_description: Optional[str] = None
     notes: Optional[str] = None
-    status: Optional[str] = None
+
+    is_round_trip: bool = False
+    return_date: Optional[date] = None
+    return_time: Optional[time] = None
+
+    total_amount: Optional[float] = 0.0
+    paid_amount: Optional[float] = 0.0
 
 
 class BookingCreatePublic(BookingBase):
-    """Схема для создания публичной заявки на лэндинге"""
-
     customer_name: str = Field(..., min_length=2, max_length=255)
     customer_phone: str = Field(..., max_length=25)
     customer_email: Optional[EmailStr] = None
@@ -32,77 +39,86 @@ class BookingCreatePublic(BookingBase):
     @field_validator("customer_phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        """Валидация и нормализация номера телефона"""
         phone = re.sub(r"\D", "", v)
-
-        if len(phone) == 10:
-            phone = "7" + phone
-        elif len(phone) == 11 and phone.startswith("8"):
+        if not re.match(r"^[78]\d{10}$", phone):
+            raise ValueError(
+                "Неверный формат телефона. Используйте формат: +7 (xxx) xxx-xx-xx"
+            )
+        if phone.startswith("8"):
             phone = "7" + phone[1:]
-
-        if not re.match(r"^7\d{10}$", phone):
-            raise ValueError("Введите корректный номер телефона (11 цифр)")
-
         return f"+{phone}"
 
     @field_validator("passenger_count")
     @classmethod
     def validate_passenger_count(cls, v: int) -> int:
-        """Проверка количества пассажиров"""
         if v <= 0:
             raise ValueError("Количество пассажиров должно быть больше нуля")
         if v > 50:
-            raise ValueError(
-                "Количество пассажиров слишком большое, свяжитесь с нами напрямую"
-            )
+            raise ValueError("Слишком много пассажиров, свяжитесь с нами напрямую")
         return v
 
     @field_validator("desired_trip_date")
     @classmethod
     def validate_date(cls, v: date) -> date:
-        """Проверка, что дата не в прошлом"""
         if v < date.today():
             raise ValueError("Дата поездки не может быть в прошлом")
         return v
 
 
-class BookingUpdate(BaseModel):
-    """Схема для частичного обновления бронирования"""
-
-    desired_trip_date: Optional[date] = None
-    desired_departure_time: Optional[time] = None
-    desired_trip_location: Optional[str] = Field(None, max_length=255)
-    arrival_location: Optional[str] = Field(None, max_length=255)
-    passenger_count: Optional[int] = None
-    luggage_description: Optional[str] = None
-    notes: Optional[str] = None
-    status: Optional[BookingStatus] = None
-
-
 class BookingCustomerResponse(BaseModel):
-    """Схема для вложенных данных клиента"""
-
     first_name: str
     phone: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookingResponse(BookingBase):
-    """Схема для ответа API с данными о бронировании"""
-
     id: UUID
     customer_id: UUID
     source: BookingSource
     status: BookingStatus
 
     customer: Optional[BookingCustomerResponse] = None
+    trips: List[TripResponse] = []
 
-    class Config:
-        from_attributes = True
+    unassigned_passengers: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BookingUpdate(BaseModel):
+    """Схема для редактирования заявки (для Админа)."""
+
+    status: Optional[BookingStatus] = None
+
+    desired_trip_date: Optional[date] = None
+    desired_departure_time: Optional[time] = None
+    desired_trip_location: Optional[str] = Field(None, max_length=255)
+    arrival_location: Optional[str] = Field(None, max_length=255)
+
+    passenger_count: Optional[int] = None
+    luggage_description: Optional[str] = None
+    notes: Optional[str] = None
+
+    is_round_trip: Optional[bool] = None
+    return_date: Optional[date] = None
+    return_time: Optional[time] = None
+
+    total_amount: Optional[float] = None
+    paid_amount: Optional[float] = None
 
 
 class BookingConfirm(BaseModel):
-    total_amount: float = Field(..., description="Итоговая цена поездки")
-    paid_amount: float = Field(0.0, description="Уже выплачено (аванс)")
+    """Схема для подтверждения заявки администратором (кнопка "Сформировать")."""
+
+    status: BookingStatus = BookingStatus.CONFIRMED
+    total_amount: Optional[float] = None
+    paid_amount: Optional[float] = None
+    notes: Optional[str] = None
+    has_trailer: bool = False
+
+
+class BookingCreateAdmin(BookingCreatePublic):
+    """Схема для создания заявки диспетчером (Админом)"""
+
+    source: BookingSource
