@@ -1,6 +1,6 @@
 import apiClient from "./client";
 import { BookingFormData } from "@shared/components/ui/BookingForm";
-import { Booking } from "@shared/types/api";
+import { Booking, BookingConfirm } from "@shared/types/api";
 
 export const submitPublicBooking = async (data: BookingFormData) => {
   const payload = {
@@ -27,6 +27,11 @@ export const fetchAdminBookings = async (skip = 0, limit = 100) => {
   return response.data;
 };
 
+export const getBooking = async (id: string): Promise<Booking> => {
+  const response = await apiClient.get(`/bookings/${id}`);
+  return response.data;
+};
+
 export const updateBooking = async (id: string, data: Partial<Booking>) => {
   const response = await apiClient.patch(`/bookings/${id}`, data);
   return response.data;
@@ -34,13 +39,13 @@ export const updateBooking = async (id: string, data: Partial<Booking>) => {
 
 export const confirmBookingToTrip = async (
   bookingId: string,
-  total_amount: number,
-  paid_amount: number,
-) => {
-  const payload = { total_amount, paid_amount };
-  const response = await apiClient.post(
-    `/bookings/${bookingId}/confirm`,
-    payload,
-  );
+  data: BookingConfirm,
+): Promise<Booking> => {
+  const response = await apiClient.post(`/bookings/${bookingId}/confirm`, data);
+  return response.data;
+};
+
+export const createAdminBooking = async (data: any) => {
+  const response = await apiClient.post("/bookings/", data);
   return response.data;
 };

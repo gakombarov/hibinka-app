@@ -1,135 +1,178 @@
 import React, { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import {
-  Box,
-  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Button,
+  TextField,
   Typography,
-  Alert,
-  CircularProgress,
+  Stack,
+  Grid,
+  Divider,
+  Box,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
-import { Modal } from "../../shared/components/ui/Modal";
-import { confirmBookingToTrip } from "../../api/bookings";
 
-interface ConfirmBookingModalProps {
+import { AppDispatch } from "../../store/store";
+import { confirmBookingThunk } from "../../store/bookingsSlice";
+import { Booking } from "../../shared/types/api";
+
+interface Props {
   open: boolean;
+  booking: Booking | null;
   onClose: () => void;
-  bookingId: string | null;
-  onSuccess: () => void;
 }
 
-export const ConfirmBookingModal: React.FC<ConfirmBookingModalProps> = ({
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-");
+  return `${day}.${month}.${year}`;
+};
+
+export const ConfirmBookingModal: React.FC<Props> = ({
   open,
+  booking,
   onClose,
-  bookingId,
-  onSuccess,
 }) => {
-  const [totalAmount, setTotalAmount] = useState<number | "">("");
-  const [paidAmount, setPaidAmount] = useState<number | "">(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState<number | "">("");
+  const [paid, setPaid] = useState<number | "">(0);
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const [hasTrailer, setHasTrailer] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setTotalAmount("");
-      setPaidAmount(0);
-      setError(null);
+      setTotal("");
+      setPaid(0);
     }
-  }, [open]);
+  }, [open, booking]);
 
-  const debt = (Number(totalAmount) || 0) - (Number(paidAmount) || 0);
-
-  const handleSubmit = async () => {
-    if (!bookingId) return;
-    if (!totalAmount || Number(totalAmount) <= 0) {
-      setError("Укажите корректную итоговую цену");
-      return;
-    }
-
+  const handleConfirm = async () => {
+    if (!booking) return;
+    setLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      await confirmBookingToTrip(
-        bookingId,
-        Number(totalAmount),
-        Number(paidAmount),
-      );
-      onSuccess();
+      await dispatch(
+        confirmBookingThunk({
+          id: booking.id,
+          data: {
+            total_amount: Number(total),
+            paid_amount: Number(paid),
+            has_trailer: hasTrailer,
+            notes: booking.luggage_description
+              ? `Багаж: ${booking.luggage_description}`
+              : undefined,
+          },
+        }),
+      ).unwrap();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Ошибка при формировании поездки");
+    } catch (error) {
+      console.error("Ошибка при подтверждении:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  if (!booking) return null;
+
   return (
-    <Modal open={open} onClose={onClose} title="Сформировать поездку">
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 1 }}>
-        <Typography variant="body2" color="text.secondary">
-          Заявка будет перенесена в Журнал. Укажите итоговую стоимость и сумму,
-          которую клиент уже выплатил.
-        </Typography>
-
-        {error && <Alert severity="error">{error}</Alert>}
-
-        <TextField
-          label="Итого к оплате (₽)"
-          type="number"
-          fullWidth
-          value={totalAmount}
-          onChange={(e) =>
-            setTotalAmount(e.target.value === "" ? "" : Number(e.target.value))
-          }
-        />
-
-        <TextField
-          label="Уже выплачено (₽)"
-          type="number"
-          fullWidth
-          value={paidAmount}
-          onChange={(e) =>
-            setPaidAmount(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          helperText="Например, внесенный аванс"
-        />
-
-        <Box
-          sx={{
-            p: 2,
-            bgcolor:
-              debt > 0
-                ? "error.main"
-                : totalAmount
-                  ? "success.main"
-                  : "grey.300",
-            borderRadius: 2,
-            color: totalAmount ? "#fff" : "text.primary",
-            transition: "background-color 0.3s",
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight="bold">
-            {!totalAmount
-              ? "Введите сумму"
-              : debt > 0
-                ? `Остаток к оплате (Долг): ${debt} ₽`
-                : "Полностью оплачено"}
-          </Typography>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Диспетчеризация заявки</DialogTitle>
+      <DialogContent dividers>
+        {/* Информационный блок*/}
+        <Box mb={3}>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary">
+                Клиент
+              </Typography>
+              <Typography variant="body1">
+                <b>{booking.customer?.first_name || "Без имени"}</b>
+              </Typography>
+              <Typography variant="body2">{booking.customer?.phone}</Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary">
+                Маршрут
+              </Typography>
+              <Typography variant="body1">
+                <b>
+                  {booking.desired_trip_location} → {booking.arrival_location}
+                </b>
+              </Typography>
+              <Typography variant="body2">
+                {formatDate(booking.desired_trip_date)} в{" "}
+                {booking.desired_departure_time}
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary">
+                Пассажиры / Багаж
+              </Typography>
+              <Typography variant="body2">
+                {booking.passenger_count} чел. |{" "}
+                {booking.luggage_description || "Без багажа"}
+              </Typography>
+            </Grid>
+          </Grid>
         </Box>
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={handleSubmit}
-          disabled={isLoading}
-          sx={{ mt: 1, py: 1.5 }}
-        >
-          {isLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Подтвердить и перенести"
-          )}
+        <Divider sx={{ mb: 3 }} />
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={hasTrailer}
+              onChange={(e) => setHasTrailer(e.target.checked)}
+            />
+          }
+          label="Этому рейсу потребуется прицеп"
+        />
+
+        {/* Форма ввода стоимости */}
+        <Stack spacing={3}>
+          <Typography variant="body2" color="primary">
+            Укажите стоимость. После подтверждения машины будут автоматически
+            созданы в Журнале поездок.
+          </Typography>
+
+          <TextField
+            label="Итоговая сумма (₽)"
+            type="number"
+            fullWidth
+            required
+            value={total}
+            onChange={(e) =>
+              setTotal(e.target.value === "" ? "" : Number(e.target.value))
+            }
+          />
+
+          <TextField
+            label="Внесена предоплата (₽)"
+            type="number"
+            fullWidth
+            value={paid}
+            onChange={(e) =>
+              setPaid(e.target.value === "" ? "" : Number(e.target.value))
+            }
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose} disabled={loading}>
+          Отмена
         </Button>
-      </Box>
-    </Modal>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          color="success"
+          disabled={loading || total === "" || total <= 0}
+        >
+          Подтвердить и Сформировать
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };

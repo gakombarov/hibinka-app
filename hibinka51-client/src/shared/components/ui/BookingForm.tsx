@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Box, Grid, InputAdornment } from "@mui/material";
 
@@ -41,11 +41,37 @@ interface BookingFormProps {
   isLoading?: boolean;
 }
 
+export const formatPhoneNumber = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  let cleanDigits = digits;
+  if (digits[0] === "7" || digits[0] === "8") {
+    cleanDigits = digits.substring(1);
+  }
+
+  let formatted = "+7";
+
+  if (cleanDigits.length > 0) formatted += " (" + cleanDigits.slice(0, 3);
+  if (cleanDigits.length >= 4) formatted += ") " + cleanDigits.slice(3, 6);
+  if (cleanDigits.length >= 7) formatted += "-" + cleanDigits.slice(6, 8);
+  if (cleanDigits.length >= 9) formatted += "-" + cleanDigits.slice(8, 10);
+
+  return formatted;
+};
+
 export const BookingForm: React.FC<BookingFormProps> = ({
   isModal = false,
   onSubmit,
   isLoading = false,
 }) => {
+  const [phone, setPhone] = useState("");
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedPhone = formatPhoneNumber(e.target.value);
+    setPhone(formattedPhone);
+  };
+
   const {
     control,
     handleSubmit,
@@ -106,15 +132,33 @@ export const BookingForm: React.FC<BookingFormProps> = ({
             <Controller
               name="customer_phone"
               control={control}
-              rules={{ required: "Обязательное поле" }}
-              render={({ field }) => (
+              rules={{
+                required: "Обязательное поле",
+                validate: (value) => {
+                  const digits = value.replace(/\D/g, "");
+
+                  if (digits.length < 11) {
+                    return "Введите номер полностью";
+                  }
+                  if (digits.length > 11) {
+                    return "Слишком много цифр";
+                  }
+                  return true;
+                },
+              }}
+              render={({ field: { onChange, value, ...restField } }) => (
                 <InputField
-                  {...field}
+                  {...restField}
+                  value={value || ""}
                   fullWidth
                   label="Телефон *"
                   placeholder="+7 (___) ___-__-__"
                   error={!!errors.customer_phone}
                   helperText={errors.customer_phone?.message}
+                  onChange={(e) => {
+                    const formattedValue = formatPhoneNumber(e.target.value);
+                    onChange(formattedValue);
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">

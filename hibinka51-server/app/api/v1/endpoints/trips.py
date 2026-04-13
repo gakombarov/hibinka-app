@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload  # <--- ВАЖНЫЙ ИМПОРТ
+from sqlalchemy.orm import selectinload, joinedload
 from typing import List
 from datetime import date
 from uuid import UUID
 
 from app.api.deps import get_db
-from app.models.trip import Trip, TripStop
+from app.models.trip import Trip, TripStop, TripStatus
+from app.models.booking import Booking, BookingStatus  # ВАЖНЫЙ ИМПОРТ
 from app.schemas.trip import TripCreate, TripResponse, TripDriverUpdate, TripUpdate
 
 router = APIRouter()
@@ -40,7 +41,7 @@ async def get_trips_for_landing(
 async def update_trip_status(
     trip_id: UUID, status_update: TripDriverUpdate, db: AsyncSession = Depends(get_db)
 ):
-    """Эндпоинт для ВОДИТЕЛЯ."""
+    """Эндпоинт для ВОДИТЕЛЯ. (Включает авто-закрытие заявки)"""
     query = (
         select(Trip)
         .options(selectinload(Trip.stops))
@@ -53,15 +54,39 @@ async def update_trip_status(
         raise HTTPException(status_code=404, detail="Поездка не найдена")
 
     trip.status = status_update.status
-
     await db.commit()
+
+    # Авто-закрытие заявки, если это была последняя машина
+    if trip.booking_id and trip.status == TripStatus.COMPLETED:
+        siblings_query = select(Trip.status).where(
+            Trip.booking_id == trip.booking_id, Trip.is_deleted == False
+        )
+        siblings_result = await db.execute(siblings_query)
+        sibling_statuses = siblings_result.scalars().all()
+
+        all_done = all(
+            s in [TripStatus.COMPLETED, TripStatus.CANCELLED] for s in sibling_statuses
+        )
+        if all_done:
+            booking = await db.get(Booking, trip.booking_id)
+            if booking and booking.status != BookingStatus.COMPLETED:
+                booking.status = BookingStatus.COMPLETED
+                db.add(booking)
+                await db.commit()
+
     await db.refresh(trip)
     return trip
 
 
 @router.post("/", response_model=TripResponse)
 async def create_trip(trip_in: TripCreate, db: AsyncSession = Depends(get_db)):
-    """Создание новой поездки в Журнале."""
+    """Создание новой поездки в Журнале (строго внутри заявки)."""
+    if not trip_in.booking_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Машину можно создать только внутри заявки",
+        )
+
     trip_data = trip_in.model_dump(exclude={"stops"})
     db_trip = Trip(**trip_data)
     db.add(db_trip)
@@ -83,11 +108,16 @@ async def create_trip(trip_in: TripCreate, db: AsyncSession = Depends(get_db)):
 async def get_all_trips(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
-    """Просмотр всего Журнала (для вывода таблицы в Дашборде)."""
+    """Просмотр всего Журнала со всеми связями."""
     query = (
         select(Trip)
-        .options(selectinload(Trip.stops))
+        .options(
+            selectinload(Trip.stops),
+            joinedload(Trip.customer),
+            joinedload(Trip.booking),
+        )
         .where(Trip.is_deleted == False)
+        .order_by(Trip.trip_date.asc(), Trip.departure_time.asc())
         .offset(skip)
         .limit(limit)
     )
@@ -116,3 +146,16 @@ async def update_trip(
     await db.commit()
     await db.refresh(trip)
     return trip
+
+
+@router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_trip(trip_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Мягкое удаление поездки. Пассажиры вернутся в нераспределенные."""
+    trip = await db.get(Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Поездка не найдена")
+
+    trip.is_deleted = True
+    db.add(trip)
+    await db.commit()
+    return None
