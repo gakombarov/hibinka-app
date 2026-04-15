@@ -79,6 +79,7 @@ export const BookingDetails: React.FC = () => {
 
   const isNew = editData.status === "NEW";
   const isCancelled = editData.status === "CANCELLED";
+  const isCompleted = editData.status === "COMPLETED";
 
   const handleSave = async () => {
     try {
@@ -86,7 +87,7 @@ export const BookingDetails: React.FC = () => {
       await dispatch(
         updateBookingThunk({ id: editData.id, data: editData }),
       ).unwrap();
-      alert("Изменения в черновике сохранены");
+      alert("Изменения успешно сохранены");
     } catch (e) {
       alert("Ошибка при сохранении");
     } finally {
@@ -96,11 +97,7 @@ export const BookingDetails: React.FC = () => {
 
   const handleFormTrips = async () => {
     const count = editData.is_round_trip ? 2 : 1;
-    if (
-      !window.confirm(
-        `Будет сформировано рейсов: ${count}. Данные заявки будут заморожены. Продолжить?`,
-      )
-    )
+    if (!window.confirm(`Будет сформировано рейсов: ${count}. Продолжить?`))
       return;
 
     try {
@@ -109,11 +106,11 @@ export const BookingDetails: React.FC = () => {
         total_amount: editData.total_amount,
         paid_amount: editData.paid_amount,
         status: "CONFIRMED",
-        has_trailer: hasTrailer, // Добавлено поле has_trailer
+        has_trailer: hasTrailer,
         notes: editData.notes,
       });
       alert("Рейсы успешно созданы");
-      navigate("/dashboard/trips");
+      dispatch(fetchBookingDetails(editData.id));
     } catch (e) {
       alert("Ошибка при формировании рейсов");
     } finally {
@@ -162,9 +159,11 @@ export const BookingDetails: React.FC = () => {
             color={
               editData.status === "NEW"
                 ? "info"
-                : editData.status === "CONFIRMED"
+                : editData.status === "COMPLETED"
                   ? "success"
-                  : "error"
+                  : editData.status === "CONFIRMED"
+                    ? "primary"
+                    : "error"
             }
             sx={{ fontWeight: "bold", height: 40, px: 2, fontSize: "1rem" }}
           />
@@ -230,7 +229,7 @@ export const BookingDetails: React.FC = () => {
                             desired_trip_location: e.target.value,
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
@@ -244,7 +243,7 @@ export const BookingDetails: React.FC = () => {
                             arrival_location: e.target.value,
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     </Grid>
                     <Grid size={{ xs: 6 }}>
@@ -258,7 +257,7 @@ export const BookingDetails: React.FC = () => {
                             desired_trip_date: val?.format("YYYY-MM-DD"),
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                         slotProps={{ textField: { fullWidth: true } }}
                       />
                     </Grid>
@@ -275,7 +274,7 @@ export const BookingDetails: React.FC = () => {
                             desired_departure_time: val?.format("HH:mm:ss"),
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                         slotProps={{ textField: { fullWidth: true } }}
                       />
                     </Grid>
@@ -304,7 +303,7 @@ export const BookingDetails: React.FC = () => {
                             is_round_trip: e.target.checked,
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     }
                     label={
@@ -330,7 +329,7 @@ export const BookingDetails: React.FC = () => {
                               return_date: val?.format("YYYY-MM-DD"),
                             })
                           }
-                          disabled={!isNew}
+                          disabled={isCancelled}
                           slotProps={{ textField: { fullWidth: true } }}
                         />
                       </Grid>
@@ -349,7 +348,7 @@ export const BookingDetails: React.FC = () => {
                               return_time: val?.format("HH:mm:ss"),
                             })
                           }
-                          disabled={!isNew}
+                          disabled={isCancelled}
                           slotProps={{ textField: { fullWidth: true } }}
                         />
                       </Grid>
@@ -382,7 +381,7 @@ export const BookingDetails: React.FC = () => {
                           })
                         }
                         onFocus={(e) => e.target.select()}
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     </Grid>
                     <Grid size={{ xs: 8 }}>
@@ -397,7 +396,7 @@ export const BookingDetails: React.FC = () => {
                             luggage_description: e.target.value,
                           })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
@@ -410,7 +409,7 @@ export const BookingDetails: React.FC = () => {
                         onChange={(e) =>
                           setEditData({ ...editData, notes: e.target.value })
                         }
-                        disabled={!isNew}
+                        disabled={isCancelled}
                       />
                     </Grid>
                   </Grid>
@@ -449,7 +448,7 @@ export const BookingDetails: React.FC = () => {
                       })
                     }
                     onFocus={(e) => e.target.select()}
-                    disabled={!isNew}
+                    disabled={isCancelled}
                     sx={{ mb: 2, bgcolor: "white" }}
                   />
 
@@ -468,7 +467,7 @@ export const BookingDetails: React.FC = () => {
                       })
                     }
                     onFocus={(e) => e.target.select()}
-                    disabled={!isNew}
+                    disabled={isCancelled}
                     sx={{ mb: 2, bgcolor: "white" }}
                   />
 
@@ -491,17 +490,19 @@ export const BookingDetails: React.FC = () => {
               </Card>
 
               <Stack spacing={2}>
+                {!isCancelled && (
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleSave}
+                    disabled={isUpdating}
+                  >
+                    Сохранить изменения
+                  </Button>
+                )}
+
                 {isNew && (
-                  <>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={handleSave}
-                      disabled={isUpdating}
-                    >
-                      Сохранить правки
-                    </Button>
-                    {/* Добавлен чекбокс для прицепа */}
+                  <Box sx={{ mt: 2, borderTop: "1px dashed grey", pt: 2 }}>
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -510,19 +511,20 @@ export const BookingDetails: React.FC = () => {
                         />
                       }
                       label="Нужен прицеп для багажа"
-                      sx={{ mb: 2 }}
+                      sx={{ mb: 2, display: "block" }}
                     />
                     <Button
                       variant="contained"
                       color="success"
                       size="large"
+                      fullWidth
                       onClick={handleFormTrips}
                       disabled={isUpdating || editData.total_amount <= 0}
                       sx={{ height: 60, fontWeight: "bold" }}
                     >
                       Сформировать рейсы
                     </Button>
-                  </>
+                  </Box>
                 )}
 
                 {!isCancelled && (
@@ -539,7 +541,12 @@ export const BookingDetails: React.FC = () => {
                 {isCancelled && <Alert severity="error">Заявка отменена</Alert>}
                 {!isNew && !isCancelled && (
                   <Alert severity="success">
-                    Заявка подтверждена. Рейсы созданы.
+                    Заявка подтверждена. Данные можно обновлять.
+                  </Alert>
+                )}
+                {isCompleted && (
+                  <Alert severity="info">
+                    Все рейсы по заявке успешно завершены.
                   </Alert>
                 )}
               </Stack>

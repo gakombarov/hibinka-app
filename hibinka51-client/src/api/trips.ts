@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import { TripResponse } from "@shared/types/api";
+import { TripResponse, TripUpdate } from "../shared/types/api";
 
 export interface TripCreate {
   trip_date: string;
@@ -8,10 +8,8 @@ export interface TripCreate {
   arrival_location: string;
   is_regular?: boolean;
   passenger_count?: number;
-
   total_amount?: number;
   paid_amount?: number;
-
   notes?: string;
 }
 
@@ -34,11 +32,11 @@ export const tripsApi = {
     return response.data;
   },
 
-  update: async (
-    id: string,
-    tripData: Partial<TripCreate>,
-  ): Promise<TripResponse> => {
-    const response = await apiClient.put(`/trips/${id}`, tripData);
+  /**
+   * Обновить существующую поездку (смена статуса, прицеп, пассажиры)
+   */
+  update: async (id: string, tripData: TripUpdate): Promise<TripResponse> => {
+    const response = await apiClient.patch(`/trips/${id}`, tripData);
     return response.data;
   },
 };

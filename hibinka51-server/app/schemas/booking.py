@@ -118,7 +118,25 @@ class BookingConfirm(BaseModel):
     has_trailer: bool = False
 
 
-class BookingCreateAdmin(BookingCreatePublic):
+class BookingCreateAdmin(BookingBase):
     """Схема для создания заявки диспетчером (Админом)"""
 
+    customer_name: str = Field(..., min_length=2, max_length=255)
+    customer_phone: str = Field(..., max_length=25)
+    customer_email: Optional[EmailStr] = None
     source: BookingSource
+
+    @field_validator("customer_phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        phone = re.sub(r"\D", "", value)
+        if phone.startswith("8"):
+            phone = "7" + phone[1:]
+        return f"+{phone}"
+
+    @field_validator("passenger_count")
+    @classmethod
+    def validate_passenger_count(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Минимум 1 человек")
+        return v

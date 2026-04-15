@@ -50,6 +50,18 @@ async def update_booking(
             if t.status != TripStatus.COMPLETED:
                 t.status = TripStatus.CANCELLED
                 db.add(t)
+    if (
+        "passenger_count" in update_data
+        and update_data["passenger_count"] != booking.passenger_count
+    ):
+        active_trips = [
+            t
+            for t in booking.trips
+            if t.status in [TripStatus.PLANNED, TripStatus.IN_PROGRESS]
+        ]
+        if len(active_trips) == 1:
+            active_trips[0].passenger_count = update_data["passenger_count"]
+            db.add(active_trips[0])
 
     for field, value in update_data.items():
         setattr(booking, field, value)

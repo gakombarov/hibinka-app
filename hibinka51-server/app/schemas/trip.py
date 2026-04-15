@@ -6,6 +6,19 @@ from pydantic import BaseModel, Field, ConfigDict, computed_field
 from app.models.trip import TripStatus, PaymentStatus
 
 
+class TripCustomerInfo(BaseModel):
+    first_name: Optional[str] = "Не указано"
+    phone: Optional[str] = "Не указано"
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TripBookingInfo(BaseModel):
+    total_amount: Optional[float] = 0
+    paid_amount: Optional[float] = 0
+    customer: Optional[TripCustomerInfo] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TripStopBase(BaseModel):
     location: str
     stop_order: int
@@ -46,6 +59,9 @@ class TripResponse(TripBase):
     scheduled_trip_id: Optional[UUID] = None
     booking_id: Optional[UUID] = None
     stops: List[TripStopBase] = []
+
+    customer: Optional[TripCustomerInfo] = None
+    booking: Optional[TripBookingInfo] = None
 
     model_config = ConfigDict(from_attributes=True)
 
