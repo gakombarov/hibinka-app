@@ -14,7 +14,18 @@ export interface TripStop {
   time?: string;
 }
 
-export interface TripResponse {
+export interface TripCustomerInfo {
+  first_name: string;
+  phone: string;
+}
+
+export interface TripBookingInfo {
+  total_amount: number;
+  paid_amount: number;
+  customer?: TripCustomerInfo;
+}
+
+export interface Trip {
   id: string;
   trip_date: string;
   departure_time: string;
@@ -29,10 +40,26 @@ export interface TripResponse {
   notes: string | null;
   stops: TripStop[];
   display_status: string;
+
   booking_id: string | null;
   vehicle_id: string | null;
   driver_id: string | null;
   scheduled_trip_id: string | null;
+
+  customer?: TripCustomerInfo | null;
+  booking?: TripBookingInfo | null;
+}
+
+export type TripResponse = Trip;
+
+export interface TripUpdate {
+  status?: TripStatus;
+  payment_status?: PaymentStatus;
+  has_trailer?: boolean;
+  notes?: string;
+  passenger_count?: number;
+  driver_id?: string;
+  vehicle_id?: string;
 }
 
 export interface BookingCreatePublic {
@@ -49,6 +76,12 @@ export interface BookingCreatePublic {
   is_round_trip: boolean;
   return_date?: string | null;
   return_time?: string | null;
+}
+
+export interface BookingCreateAdmin extends BookingCreatePublic {
+  source: BookingSource;
+  total_amount?: number;
+  paid_amount?: number;
 }
 
 export interface Booking {
@@ -72,7 +105,7 @@ export interface Booking {
   return_time?: string | null;
   total_amount: number;
   paid_amount: number;
-  trips?: TripResponse[];
+  trips?: Trip[];
 }
 
 export interface BookingConfirm {

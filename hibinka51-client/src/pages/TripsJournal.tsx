@@ -65,6 +65,14 @@ export const TripsJournal = () => {
       </Box>
     );
 
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mt: 2, mx: "auto", maxWidth: 1000 }}>
+        {error}
+      </Alert>
+    );
+  }
+
   return (
     <Box sx={{ p: 3, maxWidth: 1000, mx: "auto" }}>
       <Stack
@@ -82,7 +90,6 @@ export const TripsJournal = () => {
           </Typography>
         </Box>
 
-        {/* 3. Переключатель видимости отмененных */}
         <FormControlLabel
           control={
             <Switch
@@ -132,9 +139,8 @@ export const TripsJournal = () => {
                 <AdminTripCard
                   key={trip.id}
                   trip={trip}
-                  onAssign={() => {
-                    /* твоя логика */
-                  }}
+                  onAssign={() => {}}
+                  onTripUpdated={loadTrips}
                 />
               ))}
             </AccordionDetails>
