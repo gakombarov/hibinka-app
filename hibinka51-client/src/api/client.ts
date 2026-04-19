@@ -1,4 +1,6 @@
 import axios from "axios";
+import { store } from "../store/store";
+import { logout } from "../store/authSlice";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -46,13 +48,12 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
           return apiClient(originalRequest);
         } catch (refreshError) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("refresh_token");
+          store.dispatch(logout());
           window.location.href = "/login";
           return Promise.reject(refreshError);
         }
       } else {
-        localStorage.removeItem("token");
+        store.dispatch(logout());
         window.location.href = "/login";
       }
     }
