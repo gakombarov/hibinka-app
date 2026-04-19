@@ -69,7 +69,12 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)) 
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
 
-    new_access_token = security.create_access_token(data={"sub": str(user.id)})
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    new_access_token = security.create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=access_token_expires,
+    )
 
     return {
         "access_token": new_access_token,
