@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-push:
     name: Build & Push to Docker Hub
@@ -13,6 +16,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -20,22 +26,30 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Server
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./hibinka51-server
           file: ./hibinka51-server/Dockerfile.server
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and push Client
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./hibinka51-client
           file: ./hibinka51-client/Dockerfile.client
           push: true
           build-args: |
             VITE_API_URL=https://hibinka51.ru
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Server
@@ -49,9 +63,11 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd hibinka-app && \
-            git pull origin main && \
-            docker compose -f docker-compose.prod.yml pull && \
-            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans && \
-            docker image prune -f && \
-            docker compose -f docker-compose.prod.yml exec -T server alembic upgrade head
+            cd hibinka-app
+            docker compose -f docker-compose.prod.yml pull
+
+            docker compose -f docker-compose.prod.yml run --rm server alembic upgrade head
+
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+
+            docker image prune -f
