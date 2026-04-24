@@ -1,9 +1,9 @@
-from datetime import date, time, datetime
+from datetime import date, time
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict, computed_field
 
 from app.models.trip import TripStatus, PaymentStatus
+from pydantic import BaseModel, Field, ConfigDict, computed_field
 
 
 class TripCustomerInfo(BaseModel):
@@ -37,6 +37,8 @@ class TripBase(BaseModel):
     show_on_landing: bool = False
     has_trailer: bool = False
     notes: Optional[str] = None
+    total_amount: Optional[float] = 0.0
+    paid_amount: Optional[float] = 0.0
 
 
 class TripCreate(TripBase):
@@ -97,3 +99,5 @@ class TripUpdate(BaseModel):
     notes: Optional[str] = None
 
     stops: Optional[List[TripStopBase]] = None
+    total_amount: Optional[float] = None
+    paid_amount: Optional[float] = None
