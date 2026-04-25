@@ -1,3 +1,5 @@
+import { VehicleCategory } from "src/features/vehicles/CreateVehicleModal";
+
 export type TripStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID";
 export type BookingSource = "PHONE" | "EMAIL" | "WEBSITE" | "MESSENGER";
@@ -113,4 +115,15 @@ export interface BookingConfirm {
   paid_amount: number;
   has_trailer: boolean;
   notes?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  alias: string;
+  brand: string;
+  model: string;
+  license_plate: string;
+  capacity: number;
+  category: VehicleCategory;
+  is_active: boolean;
 }

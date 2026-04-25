@@ -22,7 +22,7 @@ import { TripsJournal } from "./pages/TripsJournal";
 import { BookingDetails } from "./features/bookings/BookingDetails";
 import { BookingsList } from "./features/bookings/BookingsList";
 import { SandboxPage } from "./pages/Sandbox/SandboxPage";
-
+import { VehiclesPage } from "./pages/VehiclesPage";
 import type { RootState } from "./store/store";
 import { logout } from "./store/authSlice";
 
@@ -103,6 +103,9 @@ const AppContent = () => {
 
               {/* Наши страницы внутри Дашборда */}
               <Route path="trips" element={<TripsJournal />} />
+
+              {/* Автопарк */}
+              <Route path="vehicles" element={<VehiclesPage />} />
 
               {/* Роуты для заявок с сайта*/}
               <Route path="bookings" element={<BookingsList />} />
