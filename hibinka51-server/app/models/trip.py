@@ -9,7 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Enum as SQLEnum,
     Integer,
-    Boolean,
+    Boolean, DECIMAL,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, validates
@@ -65,6 +65,14 @@ class Trip(IsDeletedModel):
     arrival_location = Column(String(255), nullable=False)
     passenger_count = Column(
         Integer, nullable=False, default=0, comment="Количество пассажиров в авто"
+    )
+
+    # --- Финансы ---
+    total_amount = Column(
+        DECIMAL(10, 2), nullable=True, default=0, comment="Итого к оплате за поездку"
+    )
+    paid_amount = Column(
+        DECIMAL(10, 2), nullable=True, default=0, comment="Выплаченная сумма"
     )
 
     # --- Статусы и флаги ---
