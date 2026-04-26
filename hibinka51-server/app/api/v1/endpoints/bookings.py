@@ -226,3 +226,52 @@ async def get_booking(
         raise HTTPException(status_code=404, detail="Заявка не найдена")
 
     return booking
+
+
+@router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+async def create_booking(
+        booking_in: BookingCreatePublic,
+        db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.phone == booking_in.customer_phone))
+    user = result.scalars().first()
+
+    if not user:
+        user = User(
+            phone=booking_in.customer_phone,
+            email=booking_in.customer_email or f"user_{booking_in.customer_phone}@hibinka.local",
+            account_type=UserRole.CUSTOMER,
+            first_name=booking_in.customer_name,
+            hashed_password="",
+        )
+        db.add(user)
+        await db.flush()
+
+
+    input_data = booking_in.model_dump()
+    source_val = input_data.get("source", BookingSource.WEBSITE)
+
+    booking = Booking(
+        customer_id=user.id,
+        source=source_val,
+        status=BookingStatus.NEW,
+        desired_trip_date=booking_in.desired_trip_date,
+        desired_departure_time=booking_in.desired_departure_time,
+        desired_trip_location=booking_in.desired_trip_location,
+        arrival_location=booking_in.arrival_location,
+        passenger_count=booking_in.passenger_count,
+        luggage_description=booking_in.luggage_description,
+        notes=booking_in.notes,
+    )
+
+    db.add(booking)
+    await db.commit()
+
+
+    query = (
+        select(Booking)
+        .options(joinedload(Booking.customer), selectinload(Booking.trips))
+        .where(Booking.id == booking.id)
+    )
+    res = await db.execute(query)
+    return res.scalars().first()

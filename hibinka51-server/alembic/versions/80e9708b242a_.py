@@ -1,8 +1,8 @@
-"""add trips table
+"""
 
-Revision ID: 55af0dc7b27e
-Revises: 7812278ab8bc
-Create Date: 2026-03-29 15:40:21.739098
+Revision ID: 80e9708b242a
+Revises: c2c219b196b1
+Create Date: 2026-04-26 09:07:12.958403
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '55af0dc7b27e'
-down_revision: Union[str, None] = '7812278ab8bc'
+revision: str = '80e9708b242a'
+down_revision: Union[str, None] = 'c2c219b196b1'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
