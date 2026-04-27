@@ -15,6 +15,8 @@ from app.models.booking import Booking
 from app.models.scheduled_trip import ScheduledTrip
 from app.models.trip import Trip, TripStop
 from app.models.vehicle import Vehicle
+from app.models.customer import Organization, Contact
+from app.models.driver import DriverProfile
 
 # Получаем конфиг Alembic
 config = context.config

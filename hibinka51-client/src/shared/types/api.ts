@@ -134,3 +134,30 @@ export interface Vehicle {
   category: VehicleCategory;
   is_active: boolean;
 }
+
+export interface Organization {
+  id: string;
+  name: string;
+  notes: string | null;
+  is_active: boolean;
+}
+
+export interface Contact {
+  id: string;
+  phone: string;
+  full_name: string;
+  organization_id: string | null;
+  user_id: string | null;
+  organization: Organization | null;
+}
+
+export type DriverStatus = "READY" | "BUSY" | "OFF_DUTY";
+
+export interface DriverProfile {
+  id: string;
+  call_sign: string;
+  phone: string;
+  is_external: boolean;
+  status: DriverStatus;
+  user_id: string | null;
+}

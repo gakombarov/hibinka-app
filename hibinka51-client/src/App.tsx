@@ -23,6 +23,8 @@ import { BookingDetails } from "./features/bookings/BookingDetails";
 import { BookingsList } from "./features/bookings/BookingsList";
 import { SandboxPage } from "./pages/Sandbox/SandboxPage";
 import { VehiclesPage } from "./pages/VehiclesPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { DriversPage } from "./pages/DriversPage";
 import type { RootState } from "./store/store";
 import { logout } from "./store/authSlice";
 
@@ -120,14 +122,8 @@ const AppContent = () => {
                   </Box>
                 }
               />
-              <Route
-                path="customers"
-                element={
-                  <Box sx={{ p: 4 }}>
-                    <h1>Клиенты (в разработке)</h1>
-                  </Box>
-                }
-              />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="drivers" element={<DriversPage />} />
             </Route>
           </Routes>
         </Box>
