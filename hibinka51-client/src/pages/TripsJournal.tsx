@@ -130,7 +130,6 @@ export const TripsJournal: React.FC = () => {
         "& .MuiInputBase-root": {"&:before, &:after": {display: "none"}}
     };
 
-    // Компонент для мобильной карточки
     const MobileTripCard = ({ trip }: { trip: TripResponse }) => {
         const statusCfg = getStatusConfig(trip.status);
         const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
