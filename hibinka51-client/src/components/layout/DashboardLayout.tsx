@@ -56,6 +56,11 @@ export const DashboardLayout = () => {
       path: "/dashboard/customers",
       icon: <PeopleIcon />,
     },
+    {
+      text: "Автопарк",
+      path: "/dashboard/vehicles",
+      icon: <DirectionsCarIcon />,
+    },
   ];
 
   const drawerContent = (
