@@ -38,6 +38,8 @@ services:
       - db
     networks:
       - hibinka-net
+    volumes:
+      - ./hibinka51-server/alembic/versions:/app/alembic/versions
 
   client:
     image: gakombarov/hibinka-client:latest
