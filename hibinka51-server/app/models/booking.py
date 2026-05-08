@@ -1,22 +1,23 @@
 import enum
-from datetime import date, time
+
+from app.models.base import IsDeletedModel
 from sqlalchemy import (
-    Column,
     DECIMAL,
-    String,
-    Integer,
-    Date,
-    Time,
-    Text,
-    ForeignKey,
     Boolean,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Time,
+    text,
+)
+from sqlalchemy import (
     Enum as SQLEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
-from app.models.base import IsDeletedModel
-from app.models.user import User
 
 
 class BookingSource(str, enum.Enum):
@@ -82,6 +83,9 @@ class Booking(IsDeletedModel):
         DECIMAL(10, 2), nullable=True, default=0, comment="Итого к оплате"
     )
     paid_amount = Column(DECIMAL(10, 2), nullable=True, default=0, comment="Выплачено")
+    has_trailer = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     @property
     def unassigned_passengers(self) -> int:

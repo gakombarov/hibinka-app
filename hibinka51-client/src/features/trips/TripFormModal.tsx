@@ -12,6 +12,7 @@ import {
 import { Modal } from "../../shared/components/ui/Modal";
 import { tripsApi, TripCreate } from "../../api/trips";
 import { TripResponse } from "@shared/types/api";
+import { fetchVehicles } from '../../store/vehiclesSlice';
 
 interface TripFormModalProps {
   open: boolean;

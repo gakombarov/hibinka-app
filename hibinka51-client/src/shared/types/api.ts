@@ -1,4 +1,4 @@
-import { VehicleCategory } from "src/features/vehicles/CreateVehicleModal";
+export type VehicleCategory = "CAR" | "MINIBUS" | "BUS";
 
 export type TripStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID";
@@ -36,24 +36,21 @@ export interface Trip {
     passenger_count: number;
     is_regular: boolean;
     status: TripStatus;
-
     total_amount: number;
     paid_amount: number;
     payment_status: PaymentStatus;
-
     show_on_landing: boolean;
     has_trailer: boolean;
     notes: string | null;
     stops: TripStop[];
     display_status: string;
-
     booking_id: string | null;
     vehicle_id: string | null;
     driver_id: string | null;
     scheduled_trip_id: string | null;
-
     customer?: TripCustomerInfo | null;
     booking?: TripBookingInfo | null;
+    vehicle?: Vehicle | null;
 }
 
 export type TripResponse = Trip;
@@ -123,6 +120,7 @@ export interface BookingConfirm {
     has_trailer: boolean;
     notes?: string;
 }
+
 
 export interface Vehicle {
   id: string;

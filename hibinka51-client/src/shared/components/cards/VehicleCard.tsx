@@ -1,88 +1,43 @@
-import React, { useState } from "react";
-import { Box, Typography, Stack, Button, Paper, Chip } from "@mui/material";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import { TripDetailsModal } from "../../../features/trips/TripDetailsModal";
+import React from "react";
+import { Card, Typography, Stack, Box } from "@mui/material";
+import { Vehicle } from "../../shared/types/api";
 
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-
-
-const getTripStatusColor = (status: string) => {
-  switch (status) {
-    case "Завершен":
-    case "COMPLETED":
-      return "success";
-    case "В пути":
-    case "IN_PROGRESS":
-      return "warning";
-    case "Отменен":
-    case "CANCELLED":
-      return "error";
-    default:
-      return "primary";
-  }
+export const VEHICLE_CATEGORY_LABELS: Record<string, string> = {
+    CAR: "Легковая",
+    MINIBUS: "Микроавтобус",
+    BUS: "Автобус",
 };
 
-export const VehicleCard = ({ vehicle, onVehicleDeleted }: any) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+interface VehicleCardProps {
+    vehicle: Vehicle;
+}
 
-  return (
-    <>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 1.5,
-          borderRadius: "16px",
-          border: "1px solid",
-          transition: "0.2s",
-          "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
-        }}
-      >
-        <Stack direction="row" spacing={2} alignItems="center">
-
-          <Box sx={{ flexGrow: 1 }}>
-
-            {/* ВЫВОДИМ ИМЯ И ТЕЛЕФОН */}
-            <Stack direction="row" spacing={2} color="text.secondary">
-              <Typography variant="caption" fontWeight="bold">
-                {vehicle?.license_plate} {vehicle?.alias} 👤({vehicle?.capacity} чел.)
-              </Typography>
-              <Typography variant="caption">{vehicle?.brand}, {vehicle?.model}, {vehicle?.category}</Typography>
+export const VehicleCard: React.FC<VehicleCardProps> = ({ vehicle }) => {
+    return (
+        <Card sx={{ p: 2, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+            <Stack spacing={1}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            bgcolor: "#F5F5F5",
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            fontWeight: 700,
+                            color: "text.secondary"
+                        }}
+                    >
+                        {VEHICLE_CATEGORY_LABELS[vehicle.category] || vehicle.category}
+                    </Typography>
+                </Box>
+                <Typography variant="h6" fontWeight="800">
+                    {vehicle.alias || `${vehicle.brand} ${vehicle.model}`}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" fontWeight="600">
+                    {vehicle.license_plate} • {vehicle.capacity} мест
+                </Typography>
             </Stack>
-          </Box>
-
-          {/* КНОПКА */}
-          <Stack alignItems="flex-end" spacing={1}>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <EditIcon/>
-            </Button>
-          </Stack>
-
-          {/* УДАЛИТЬ АВТО */}
-          <Stack alignItems="flex-end" spacing={1}>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => onVehicleDeleted(vehicle.id)}
-            >
-              <DeleteIcon/>
-            </Button>
-          </Stack>
-
-        </Stack>
-      </Paper>
-
-      {/* <TripDetailsModal
-        trip={trip}
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUpdate={onTripUpdated}
-      /> */}
-    </>
-  );
+        </Card>
+    );
 };

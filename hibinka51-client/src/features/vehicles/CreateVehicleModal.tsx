@@ -1,195 +1,175 @@
-import React, { useState, forwardRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Grid,
-  TextField,
-  Button,
-  FormControlLabel,
-  Switch,
-  MenuItem,
-  Stack,
-  Typography,
-  Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    TextField,
+    MenuItem,
+    Stack,
 } from "@mui/material";
-import {
-  LocalizationProvider,
-  DatePicker,
-  TimePicker,
-} from "@mui/x-date-pickers";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { IMaskInput } from "react-imask";
-import dayjs from "dayjs";
-import "dayjs/locale/ru";
-import { Modal } from "../../shared/components/ui/Modal";
-import { createVehicle, updateVehicle } from "../../api/vehicles";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../../store/store";
+import { createVehicle, updateVehicle } from "../../store/vehiclesSlice";
+import { Vehicle } from "../../shared/types/api";
 
-export enum VehicleCategory {
-    BUS = "BUS",
-    MINIBUS = "MINIBUS"
+interface CreateVehicleModalProps {
+    open: boolean;
+    onClose: () => void;
+    vehicleToEdit?: Vehicle | null;
 }
 
-const PhoneMaskCustom = forwardRef<HTMLInputElement, any>(
-  function PhoneMaskCustom(props, ref) {
-    const { onChange, ...other } = props;
-    return (
-      <IMaskInput
-        {...other}
-        mask="+7 (#00) 000-00-00"
-        definitions={{ "#": /[1-9]/ }}
-        inputRef={ref}
-        onAccept={(value: any) =>
-          onChange({ target: { name: props.name, value } })
+const CATEGORIES = [
+    { value: "CAR", label: "Легковая" },
+    { value: "MINIBUS", label: "Микроавтобус" },
+    { value: "BUS", label: "Автобус" },
+];
+
+export const CreateVehicleModal: React.FC<CreateVehicleModalProps> = ({
+    open,
+    onClose,
+    vehicleToEdit,
+}) => {
+    const dispatch = useDispatch<AppDispatch>();
+
+    const [formData, setFormData] = useState<Partial<Vehicle>>({
+        alias: "",
+        brand: "",
+        model: "",
+        license_plate: "",
+        capacity: 1,
+        category: "CAR",
+        is_active: true,
+    });
+
+    useEffect(() => {
+        if (open) {
+            if (vehicleToEdit) {
+                setFormData({
+                    ...vehicleToEdit,
+                });
+            } else {
+                setFormData({
+                    alias: "",
+                    brand: "",
+                    model: "",
+                    license_plate: "",
+                    capacity: 1,
+                    category: "CAR",
+                    is_active: true,
+                });
+            }
         }
-        overwrite
-      />
-    );
-  },
-);
+    }, [vehicleToEdit, open]);
 
-export const CreateVehicleModal = ({ vehicle, open, onClose, onSuccess }: any) => {
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<any>({
-    alias: vehicle?.alias || '',
-    brand: vehicle?.brand || '',
-    model: vehicle?.model || '',
-    license_plate: vehicle?.license_plate || '',
-    capacity: vehicle?.capacity || 0,
-    category: vehicle?.category || VehicleCategory.BUS,
-    is_active: vehicle?.is_active || false,
-  });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: name === "capacity" ? (value === "" ? "" : Number(value)) : value,
+        }));
+    };
 
-  const handleSubmit = async () => {
-    // if (!form.customer_name || form.customer_phone.length < 10) {
-    //   alert("Введите корректное имя и телефон");
-    //   return;
-    // }
-    try {
-      setLoading(true);
-      if (vehicle) {
-        await updateVehicle({...form, id: vehicle.id});
-      } else {
-        await createVehicle(form);
-      }
-      onSuccess();
-      onClose();
-    } catch (e) {
-      console.log(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleSubmit = async () => {
+        try {
+            if (vehicleToEdit?.id) {
+                await dispatch(updateVehicle({ id: vehicleToEdit.id, data: formData })).unwrap();
+            } else {
+                await dispatch(createVehicle(formData as Vehicle)).unwrap();
+            }
+            onClose();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ru">
-      <Modal open={open} onClose={onClose} title={vehicle ? "Редактировать транспорт" : "Новый транспорт"}>
-        <Box sx={{ mt: 1, p: 1 }}>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 6 }}>
-              <TextField
-                label="Псевдоним"
-                fullWidth
-                size="small"
-                value={form.alias}
-                onChange={(e) =>
-                  setForm({ ...form, alias: e.target.value })
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <TextField
-                label="Марка"
-                fullWidth
-                size="small"
-                value={form.brand}
-                onChange={(e) =>
-                  setForm({ ...form, brand: e.target.value })
-                }
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                label="Модель"
-                fullWidth
-                size="small"
-                value={form.model}
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <TextField
-                label="Госномер"
-                fullWidth
-                size="small"
-                value={form.license_plate}
-                onChange={(e) =>
-                  setForm({ ...form, license_plate: e.target.value })
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <TextField
-                label="Кол-во пассажирских мест"
-                fullWidth
-                size="small"
-                value={form.capacity}
-                onChange={(e) =>
-                  setForm({ ...form, capacity: e.target.value })
-                }
-              />
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <TextField
-                select
-                label="Категория"
-                fullWidth
-                size="small"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              >
-                <MenuItem value={VehicleCategory.BUS}>Автобус</MenuItem>
-                <MenuItem value={VehicleCategory.MINIBUS}>Минибус</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={form.is_active}
-                    onChange={(e) =>
-                      setForm({ ...form, is_active: e.target.checked })
-                    }
-                  />
-                }
-                label={
-                  <Typography variant="body2" fontWeight="bold">
-                    Активный
-                  </Typography>
-                }
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
-              <Stack direction="row" spacing={2}>
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+            <DialogTitle fontWeight="800">
+                {vehicleToEdit ? "Редактировать транспорт" : "Новый транспорт"}
+            </DialogTitle>
+            <DialogContent dividers>
+                <Stack spacing={2.5} mt={1}>
+                    <TextField
+                        name="alias"
+                        label="Алиас (Название для отображения)"
+                        value={formData.alias || ""}
+                        onChange={handleChange}
+                        fullWidth
+                    />
+                    <Stack direction="row" spacing={2}>
+                        <TextField
+                            name="brand"
+                            label="Марка"
+                            value={formData.brand || ""}
+                            onChange={handleChange}
+                            fullWidth
+                            required
+                        />
+                        <TextField
+                            name="model"
+                            label="Модель"
+                            value={formData.model || ""}
+                            onChange={handleChange}
+                            fullWidth
+                            required
+                        />
+                    </Stack>
+                    <TextField
+                        name="license_plate"
+                        label="Гос. номер"
+                        value={formData.license_plate || ""}
+                        onChange={handleChange}
+                        fullWidth
+                        required
+                    />
+                    <Stack direction="row" spacing={2}>
+                        <TextField
+                            name="capacity"
+                            label="Вместимость (мест)"
+                            type="number"
+                            value={formData.capacity}
+                            onChange={handleChange}
+                            fullWidth
+                            required
+                        />
+                        <TextField
+                            select
+                            name="category"
+                            label="Категория"
+                            value={formData.category || "CAR"}
+                            onChange={handleChange}
+                            fullWidth
+                            required
+                        >
+                            {CATEGORIES.map((c) => (
+                                <MenuItem key={c.value} value={c.value}>
+                                    {c.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Stack>
+                </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+                <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700 }}>
+                    Отмена
+                </Button>
                 <Button
-                  variant="contained"
-                  fullWidth
-                  size="large"
-                  onClick={handleSubmit}
-                  disabled={loading}
+                    onClick={handleSubmit}
+                    variant="contained"
+                    sx={{
+                        bgcolor: "#FFD60A",
+                        color: "black",
+                        fontWeight: 800,
+                        boxShadow: "none",
+                        "&:hover": { bgcolor: "#E5C009", boxShadow: "none" },
+                    }}
                 >
-                  {vehicle ? 'Сохранить' : 'Создать'}
+                    Сохранить
                 </Button>
-                <Button variant="outlined" fullWidth onClick={onClose}>
-                  Отмена
-                </Button>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Box>
-      </Modal>
-    </LocalizationProvider>
-  );
+            </DialogActions>
+        </Dialog>
+    );
 };

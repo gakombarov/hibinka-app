@@ -39,6 +39,7 @@ class TripBase(BaseModel):
     notes: Optional[str] = None
     total_amount: Optional[float] = 0.0
     paid_amount: Optional[float] = 0.0
+    vehicle_id: Optional[UUID] = None
 
 
 class TripCreate(TripBase):

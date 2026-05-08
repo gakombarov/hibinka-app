@@ -10,7 +10,9 @@ import {
     Checkbox,
     Chip,
     CircularProgress,
+    Divider,
     IconButton,
+    InputBase,
     MenuItem,
     Paper,
     Select,
@@ -24,8 +26,7 @@ import {
     TextField,
     Typography,
     useMediaQuery,
-    useTheme,
-    Divider
+    useTheme
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -37,10 +38,12 @@ import "dayjs/locale/ru";
 
 import {tripsApi} from "../api/trips";
 import {TripResponse} from "../shared/types/api";
+import {AssignVehicleModal} from "../features/trips/AssignVehicleModal";
+import {vehiclesApi} from "../api/vehicles";
 
 const COLORS = {
-    PAGE_BG: "#F2F2F7", // Светло-серый macOS фон
-    ACCENT_YELLOW: "#FFD60A", // Яркий Apple Yellow
+    PAGE_BG: "#F2F2F7",
+    ACCENT_YELLOW: "#FFD60A",
     CARD_BG: "#FFFFFF",
     PALE_YELLOW: "#FFFBEB",
     BORDER: "rgba(0,0,0,0.05)",
@@ -49,16 +52,9 @@ const COLORS = {
 };
 
 const COLS = {
-    TIME: 75,
-    ROUTE: 280,
-    CLIENT: 160,
-    PASS: 60,
-    TRAIL: 50,
-    AUTO: 130,
-    DRIVER: 130,
-    PAID: 95,
-    TOTAL: 95,
-    STATUS: 150,
+    TIME: 75, ROUTE: 280, CLIENT: 160, PASS: 60,
+    TRAIL: 50, AUTO: 130, DRIVER: 130, PAID: 95,
+    TOTAL: 95, STATUS: 150,
 };
 
 export const TripsJournal: React.FC = () => {
@@ -66,19 +62,34 @@ export const TripsJournal: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+    const [vehicles, setVehicles] = useState<any[]>([]);
     const [trips, setTrips] = useState<TripResponse[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [assignModal, setAssignModal] = useState<{
+        open: boolean;
+        tripId: string | null;
+        currentVehicle: any | null
+    }>({
+        open: false,
+        tripId: null,
+        currentVehicle: null
+    });
+
     const loadData = async () => {
         try {
-            const data = await tripsApi.getAll();
-            setTrips(data);
+            const [tripsData, vehiclesData] = await Promise.all([
+                tripsApi.getAll(),
+                vehiclesApi.getAll()
+            ]);
+            setTrips(tripsData);
+            setVehicles(vehiclesData);
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     useEffect(() => {
         loadData();
@@ -93,12 +104,35 @@ export const TripsJournal: React.FC = () => {
         }
     };
 
+    const handleAssignVehicle = async (vehicleId: string, split: boolean) => {
+        if (!assignModal.tripId) return;
+
+        const targetTrip = trips.find(t => t.id === assignModal.tripId);
+        const assignedVehicle = vehicles.find(v => v.id === vehicleId);
+        if (!targetTrip || !assignedVehicle) return;
+
+        try {
+            await tripsApi.assignVehicle(assignModal.tripId, vehicleId, split);
+            await loadData();
+        } catch (e: any) {
+            console.error("Ошибка при назначении авто:", e);
+            alert(`Ошибка: ${e.response?.data?.detail || "Не удалось назначить машину"}`);
+            await loadData();
+        } finally {
+            setAssignModal({open: false, tripId: null, currentVehicle: null});
+        }
+    };
+
     const getStatusConfig = (status: string) => {
         switch (status) {
-            case "COMPLETED": return {color: "success" as const, label: "Завершен"};
-            case "IN_PROGRESS": return {color: "warning" as const, label: "В пути"};
-            case "CANCELLED": return {color: "error" as const, label: "Отменен"};
-            default: return {color: "info" as const, label: "Ожидание"};
+            case "COMPLETED":
+                return {color: "success" as const, label: "Завершен"};
+            case "IN_PROGRESS":
+                return {color: "warning" as const, label: "В пути"};
+            case "CANCELLED":
+                return {color: "error" as const, label: "Отменен"};
+            default:
+                return {color: "info" as const, label: "Ожидание"};
         }
     };
 
@@ -112,52 +146,72 @@ export const TripsJournal: React.FC = () => {
     }, [trips]);
 
     const cellSx = {
-        padding: "10px 12px",
-        borderRight: `1px solid ${COLORS.BORDER}`,
-        borderBottom: `1px solid ${COLORS.BORDER}`,
-        "&:last-child": {borderRight: "none"}
+        padding: "10px 12px", borderRight: `1px solid ${COLORS.BORDER}`,
+        borderBottom: `1px solid ${COLORS.BORDER}`, "&:last-child": {borderRight: "none"}
     };
 
     const inputSx = {
         "& .MuiInputBase-input": {
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            textAlign: "center",
-            borderRadius: "8px",
-            padding: "4px",
+            fontSize: "0.9rem", fontWeight: 800, textAlign: "center", borderRadius: "8px", padding: "4px",
             "&:hover": {bgcolor: "rgba(0,0,0,0.03)"}
         },
         "& .MuiInputBase-root": {"&:before, &:after": {display: "none"}}
     };
 
-    const MobileTripCard = ({ trip }: { trip: TripResponse }) => {
-        const statusCfg = getStatusConfig(trip.status);
+    const getAssignButtonProps = (isAssigned: boolean) => ({
+        variant: isAssigned ? "contained" : "outlined" as const,
+        sx: {
+            borderRadius: "10px", fontWeight: 800, fontSize: isMobile ? "0.7rem" : "0.65rem",
+            borderStyle: isAssigned ? 'solid' : 'dashed', color: isAssigned ? '#000' : "#515154",
+            bgcolor: isAssigned ? COLORS.ACCENT_YELLOW : 'transparent', boxShadow: 'none',
+            '&:hover': {bgcolor: isAssigned ? alpha(COLORS.ACCENT_YELLOW, 0.8) : 'rgba(0,0,0,0.04)', boxShadow: 'none'}
+        }
+    });
+
+    const MobileTripCard = ({trip}: { trip: TripResponse }) => {
         const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
+
+        const vehicleObj = (trip as any).vehicle || vehicles.find(v => v.id === (trip as any).vehicle_id);
+        const isVehicleAssigned = !!vehicleObj;
+        const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : "Выбрать авто";
+        const isDriverAssigned = false;
 
         return (
             <Paper elevation={0} sx={{
-                p: 2, mb: 2, borderRadius: "18px",
+                p: 2,
+                mb: 2,
+                borderRadius: "18px",
                 border: `1px solid ${COLORS.BORDER}`,
                 bgcolor: COLORS.CARD_BG
             }}>
+
+                {/* Шапка карточки: Время отправления и Статус рейса */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <AccessTimeIcon sx={{ fontSize: 16, color: COLORS.ACCENT_YELLOW }} />
-                        <Typography fontWeight="900" fontSize="1.1rem">
-                            {trip.departure_time.slice(0, 5)}
-                        </Typography>
+                        <AccessTimeIcon sx={{fontSize: 16, color: COLORS.ACCENT_YELLOW}}/>
+                        <InputBase
+                            type="time" defaultValue={trip.departure_time.slice(0, 5)}
+                            onBlur={(e) => handleUpdate(trip.id, {departure_time: e.target.value})}
+                            inputProps={{
+                                style: {
+                                    padding: 0,
+                                    fontWeight: 900,
+                                    fontSize: "1.1rem",
+                                    width: '95px',
+                                    textAlign: 'center'
+                                }
+                            }}
+                        />
                     </Stack>
                     <Select
                         value={trip.status} size="small" variant="standard" disableUnderline
                         onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
                         renderValue={(v) => {
                             const cfg = getStatusConfig(v as string);
-                            return (
-                                <Chip label={cfg.label} color={cfg.color} size="small"
-                                      sx={{ fontWeight: 800, borderRadius: "6px", height: 24 }}/>
-                            );
+                            return <Chip label={cfg.label} color={cfg.color} size="small"
+                                         sx={{fontWeight: 800, borderRadius: "6px", height: 24}}/>;
                         }}
-                        sx={{ "& .MuiSelect-select": { py: 0, display: 'flex' } }}
+                        sx={{"& .MuiSelect-select": {py: 0, display: 'flex'}}}
                     >
                         <MenuItem value="PLANNED">ОЖИДАНИЕ</MenuItem>
                         <MenuItem value="IN_PROGRESS">В ПУТИ</MenuItem>
@@ -166,70 +220,129 @@ export const TripsJournal: React.FC = () => {
                     </Select>
                 </Stack>
 
-                <Typography variant="body1" fontWeight="900" sx={{ mb: 1, letterSpacing: "-0.02em" }}>
-                    {trip.departure_location} <br />
-                    <Typography component="span" sx={{ color: COLORS.ACCENT_YELLOW, fontSize: "1.2rem", lineHeight: 0 }}>↓</Typography> <br />
+                {/* Блок маршрута: Откуда и Куда */}
+                <Typography variant="body1" fontWeight="900" sx={{mb: 1, letterSpacing: "-0.02em"}}>
+                    {trip.departure_location} <br/>
+                    <Typography component="span"
+                                sx={{color: COLORS.ACCENT_YELLOW, fontSize: "1.2rem", lineHeight: 0}}>↓</Typography>
+                    <br/>
                     {trip.arrival_location}
                 </Typography>
 
-                <Divider sx={{ my: 1.5, opacity: 0.5 }} />
+                <Divider sx={{my: 1.5, opacity: 0.5}}/>
 
+                {/* Блок настройки параметров рейса: Места и Прицеп */}
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="caption"
+                                    sx={{color: COLORS.TEXT_SECONDARY, fontWeight: 700}}>МЕСТ:</Typography>
+                        <InputBase
+                            type="number" defaultValue={trip.passenger_count}
+                            onBlur={(e) => handleUpdate(trip.id, {passenger_count: Number(e.target.value)})}
+                            inputProps={{style: {padding: 0, fontWeight: 900, width: '40px', textAlign: 'center'}}}
+                            sx={{bgcolor: COLORS.PAGE_BG, borderRadius: '6px', px: 1, py: 0.5}}
+                        />
+                    </Stack>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="caption"
+                                    sx={{color: COLORS.TEXT_SECONDARY, fontWeight: 700}}>ПРИЦЕП:</Typography>
+                        <Checkbox
+                            size="small" checked={Boolean(trip.has_trailer)}
+                            onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
+                            sx={{p: 0}}
+                        />
+                    </Stack>
+                </Stack>
+
+                {/* Информационный блок: Клиент и Оплата */}
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Box>
-                        <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: 700, display: 'block' }}>КЛИЕНТ</Typography>
-                        <Typography fontWeight="800" fontSize="0.85rem">
-                            {trip.customer?.first_name?.toUpperCase() || "ТЕНДЕР"}
-                        </Typography>
-                        <Typography color="primary" fontWeight="700" fontSize="0.75rem">
-                            {trip.customer?.phone || "НЕТ НОМЕРА"}
-                        </Typography>
+                        <Typography variant="caption" sx={{
+                            color: COLORS.TEXT_SECONDARY,
+                            fontWeight: 700,
+                            display: 'block'
+                        }}>КЛИЕНТ</Typography>
+                        <Typography fontWeight="800"
+                                    fontSize="0.85rem">{trip.customer?.first_name?.toUpperCase() || "ТЕНДЕР"}</Typography>
+                        <Typography color="primary" fontWeight="700"
+                                    fontSize="0.75rem">{trip.customer?.phone || "НЕТ НОМЕРА"}</Typography>
                     </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: 700, display: 'block' }}>ОПЛАТА</Typography>
-                        <Typography fontWeight="900" color={isFullyPaid ? "#34C759" : "#FF3B30"}>
-                            {trip.paid_amount || 0} / {trip.total_amount || 0} ₽
-                        </Typography>
+
+                    <Box sx={{textAlign: 'right'}}>
+                        <Typography variant="caption" sx={{
+                            color: COLORS.TEXT_SECONDARY,
+                            fontWeight: 700,
+                            display: 'block'
+                        }}>ОПЛАТА</Typography>
+                        <Stack direction="row" alignItems="center" spacing={0.5} justifyContent="flex-end">
+                            <InputBase
+                                type="number" defaultValue={trip.paid_amount || 0}
+                                onBlur={(e) => handleUpdate(trip.id, {paid_amount: Number(e.target.value)})}
+                                inputProps={{
+                                    style: {
+                                        textAlign: 'right',
+                                        padding: 0,
+                                        fontWeight: 900,
+                                        color: isFullyPaid ? "#34C759" : "#FF3B30",
+                                        width: '50px'
+                                    }
+                                }}
+                            />
+                            <Typography fontWeight="900" color={isFullyPaid ? "#34C759" : "#FF3B30"}>/</Typography>
+                            <InputBase
+                                type="number" defaultValue={trip.total_amount || 0}
+                                onBlur={(e) => handleUpdate(trip.id, {total_amount: Number(e.target.value)})}
+                                inputProps={{style: {padding: 0, fontWeight: 900, width: '50px'}}}
+                            />
+                            <Typography fontWeight="900">₽</Typography>
+                        </Stack>
                     </Box>
                 </Stack>
 
+                {/* Нижняя панель действий: Назначить авто, водителя и переход в бронирование */}
                 <Stack direction="row" spacing={1} mt={2}>
-                    <Button fullWidth size="small" variant="outlined" startIcon={<DirectionsCarIcon />} sx={{
-                        borderRadius: "10px", fontWeight: 800, fontSize: "0.7rem", borderStyle: 'dashed', color: "#515154"
-                    }}>
-                        Авто
+                    <Button
+                        fullWidth size="small" startIcon={<DirectionsCarIcon/>}
+                        {...getAssignButtonProps(isVehicleAssigned)}
+                        onClick={() => setAssignModal({
+                            open: true,
+                            tripId: trip.id,
+                            currentVehicle: vehicleObj || null
+                        })}
+                    >
+                        {vehicleDisplay}
                     </Button>
-                    <Button fullWidth size="small" variant="outlined" startIcon={<PersonIcon />} sx={{
-                        borderRadius: "10px", fontWeight: 800, fontSize: "0.7rem", borderStyle: 'dashed', color: "#515154"
-                    }}>
+                    <Button fullWidth size="small"
+                            startIcon={<PersonIcon/>} {...getAssignButtonProps(isDriverAssigned)}>
                         Водитель
                     </Button>
-                    <IconButton size="small" sx={{ bgcolor: COLORS.PAGE_BG, borderRadius: "10px" }} onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
-                        <OpenInNewIcon sx={{ fontSize: 18 }} />
+                    <IconButton size="small" sx={{bgcolor: COLORS.PAGE_BG, borderRadius: "10px"}}
+                                onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
+                        <OpenInNewIcon sx={{fontSize: 18}}/>
                     </IconButton>
                 </Stack>
             </Paper>
         );
     };
 
-    if (loading) return <Box sx={{display: 'flex', justifyContent: 'center', mt: 10}}><CircularProgress/></Box>;
+    if (loading && trips.length === 0) return <Box
+        sx={{display: 'flex', justifyContent: 'center', mt: 10}}><CircularProgress/></Box>;
 
     return (
         <Box sx={{p: isMobile ? 2 : 4, bgcolor: COLORS.PAGE_BG, minHeight: "100vh"}}>
-            <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900" mb={isMobile ? 2 : 4} sx={{letterSpacing: "-0.04em", color: "#1D1D1F"}}>
+
+            {/* Заголовок страницы */}
+            <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900" mb={isMobile ? 2 : 4}
+                        sx={{letterSpacing: "-0.04em", color: "#1D1D1F"}}>
                 Журнал рейсов
             </Typography>
 
+            {/* Отрисовка сгруппированных по дням рейсов */}
             {Object.entries(groupedTrips).sort((a, b) => dayjs(b[0]).diff(dayjs(a[0]))).map(([date, dayTrips]) => (
-                <Accordion
-                    key={date}
-                    defaultExpanded
-                    elevation={0}
-                    sx={{
-                        mb: 3,
-                        bgcolor: "transparent",
-                        "&:before": {display: "none"}
-                    }}
-                >
+                <Accordion key={date} defaultExpanded elevation={0}
+                           sx={{mb: 3, bgcolor: "transparent", "&:before": {display: "none"}}}>
+
+                    {/* Плашка с датой (желтая) */}
                     <AccordionSummary
                         expandIcon={<ExpandMoreIcon/>}
                         sx={{
@@ -248,9 +361,10 @@ export const TripsJournal: React.FC = () => {
 
                     <AccordionDetails sx={{p: 0}}>
                         {isMobile ? (
-                            <Box sx={{ px: 0.5 }}>
+                            <Box sx={{px: 0.5}}>
+                                {/* Рендер списка карточек для мобильных устройств */}
                                 {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map(trip => (
-                                    <MobileTripCard key={trip.id} trip={trip} />
+                                    <MobileTripCard key={trip.id} trip={trip}/>
                                 ))}
                             </Box>
                         ) : (
@@ -260,7 +374,9 @@ export const TripsJournal: React.FC = () => {
                                 boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
                                 border: `1px solid ${COLORS.BORDER}`
                             }}>
+                                {/* Рендер полноценной таблицы для ПК */}
                                 <Table sx={{tableLayout: "fixed", minWidth: 1100, borderCollapse: 'collapse'}}>
+
                                     <TableHead sx={{bgcolor: "#FBFBFC"}}>
                                         <TableRow sx={{
                                             "& th": {
@@ -273,25 +389,46 @@ export const TripsJournal: React.FC = () => {
                                             <TableCell sx={{...cellSx, width: COLS.TIME}}>Время</TableCell>
                                             <TableCell sx={{...cellSx, width: COLS.ROUTE}}>Маршрут</TableCell>
                                             <TableCell sx={{...cellSx, width: COLS.CLIENT}}>Клиент</TableCell>
-                                            <TableCell sx={{...cellSx, width: COLS.PASS, textAlign: 'center'}}>Мест</TableCell>
-                                            <TableCell sx={{...cellSx, width: COLS.TRAIL, textAlign: 'center'}}>Пр</TableCell>
+                                            <TableCell
+                                                sx={{...cellSx, width: COLS.PASS, textAlign: 'center'}}>Мест</TableCell>
+                                            <TableCell
+                                                sx={{...cellSx, width: COLS.TRAIL, textAlign: 'center'}}>Пр</TableCell>
                                             <TableCell sx={{...cellSx, width: COLS.AUTO}}>Транспорт</TableCell>
                                             <TableCell sx={{...cellSx, width: COLS.DRIVER}}>Водитель</TableCell>
-                                            <TableCell sx={{...cellSx, width: COLS.PAID, textAlign: 'right'}}>Оплата</TableCell>
-                                            <TableCell sx={{...cellSx, width: COLS.TOTAL, textAlign: 'right'}}>Итого</TableCell>
-                                            <TableCell sx={{...cellSx, width: COLS.STATUS, textAlign: 'center', borderRight: 'none'}}>Статус</TableCell>
+                                            <TableCell sx={{
+                                                ...cellSx,
+                                                width: COLS.PAID,
+                                                textAlign: 'right'
+                                            }}>Оплата</TableCell>
+                                            <TableCell sx={{
+                                                ...cellSx,
+                                                width: COLS.TOTAL,
+                                                textAlign: 'right'
+                                            }}>Итого</TableCell>
+                                            <TableCell sx={{
+                                                ...cellSx,
+                                                width: COLS.STATUS,
+                                                textAlign: 'center',
+                                                borderRight: 'none'
+                                            }}>Статус</TableCell>
                                         </TableRow>
                                     </TableHead>
+
                                     <TableBody>
                                         {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map((trip, idx) => {
                                             const rowBg = idx % 2 === 0 ? COLORS.PALE_YELLOW : "#FFFFFF";
                                             const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
+                                            const vehicleObj = (trip as any).vehicle || vehicles.find(v => v.id === (trip as any).vehicle_id);
+                                            const isVehicleAssigned = !!vehicleObj;
+                                            const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : 'Выбрать авто';
 
                                             return (
                                                 <TableRow key={trip.id} sx={{
                                                     bgcolor: rowBg,
                                                     "&:hover": {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05)}
                                                 }}>
+
+                                                    {/* Столбец: Время */}
                                                     <TableCell sx={cellSx}>
                                                         <TextField
                                                             variant="standard"
@@ -299,33 +436,42 @@ export const TripsJournal: React.FC = () => {
                                                             onBlur={(e) => handleUpdate(trip.id, {departure_time: e.target.value})}
                                                             sx={{
                                                                 ...inputSx,
-                                                                "& .MuiInputBase-input": { textAlign: 'left', fontWeight: 900 }
+                                                                "& .MuiInputBase-input": {
+                                                                    textAlign: 'left',
+                                                                    fontWeight: 900
+                                                                }
                                                             }}
                                                         />
                                                     </TableCell>
 
+                                                    {/* Столбец: Маршрут */}
                                                     <TableCell sx={cellSx}>
                                                         <Typography variant="body2" fontWeight="900" color="#1D1D1F">
                                                             {trip.departure_location} → {trip.arrival_location}
                                                         </Typography>
                                                     </TableCell>
 
+                                                    {/* Столбец: Данные клиента и кнопка перехода в бронь */}
                                                     <TableCell sx={cellSx}>
                                                         <Stack direction="row" spacing={1} alignItems="center">
                                                             <Box sx={{minWidth: 0}}>
-                                                                <Typography variant="caption" fontWeight="900" color="black" display="block">
+                                                                <Typography variant="caption" fontWeight="900"
+                                                                            color="black" display="block">
                                                                     {trip.customer?.first_name?.toUpperCase() || "ТЕНДЕР"}
                                                                 </Typography>
-                                                                <Typography variant="caption" color="primary" sx={{fontWeight: 800, fontSize: '0.65rem'}}>
+                                                                <Typography variant="caption" color="primary"
+                                                                            sx={{fontWeight: 800, fontSize: '0.65rem'}}>
                                                                     {trip.customer?.phone || "НЕТ НОМЕРА"}
                                                                 </Typography>
                                                             </Box>
-                                                            <IconButton size="small" onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
+                                                            <IconButton size="small"
+                                                                        onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
                                                                 <OpenInNewIcon sx={{fontSize: 14, color: "#86868B"}}/>
                                                             </IconButton>
                                                         </Stack>
                                                     </TableCell>
 
+                                                    {/* Столбец: Количество пассажиров (мест) */}
                                                     <TableCell sx={{...cellSx, textAlign: 'center'}}>
                                                         <TextField
                                                             type="number" variant="standard"
@@ -335,30 +481,36 @@ export const TripsJournal: React.FC = () => {
                                                         />
                                                     </TableCell>
 
+                                                    {/* Столбец: Чекбокс прицепа */}
                                                     <TableCell sx={{...cellSx, textAlign: 'center'}}>
                                                         <Checkbox
-                                                            size="small" checked={trip.has_trailer}
+                                                            size="small" checked={Boolean(trip.has_trailer)}
                                                             onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
                                                             sx={{borderRadius: "4px"}}
                                                         />
                                                     </TableCell>
 
+                                                    {/* Столбец: Кнопка назначения машины */}
                                                     <TableCell sx={cellSx}>
-                                                        <Button fullWidth size="small" variant="outlined" sx={{
-                                                            borderRadius: "10px", fontSize: "0.65rem", fontWeight: 800, borderStyle: 'dashed', color: "#515154"
-                                                        }}>
-                                                            Выбрать авто
+                                                        <Button
+                                                            fullWidth {...getAssignButtonProps(isVehicleAssigned)}
+                                                            onClick={() => setAssignModal({
+                                                                open: true,
+                                                                tripId: trip.id,
+                                                                currentVehicle: vehicleObj || null
+                                                            })}
+                                                        >
+                                                            {vehicleDisplay}
                                                         </Button>
                                                     </TableCell>
 
+                                                    {/* Столбец: Кнопка назначения водителя */}
                                                     <TableCell sx={cellSx}>
-                                                        <Button fullWidth size="small" variant="outlined" sx={{
-                                                            borderRadius: "10px", fontSize: "0.65rem", fontWeight: 800, borderStyle: 'dashed', color: "#515154"
-                                                        }}>
-                                                            Выбрать вод.
-                                                        </Button>
+                                                        <Button fullWidth {...getAssignButtonProps(false)}>Выбрать
+                                                            вод.</Button>
                                                     </TableCell>
 
+                                                    {/* Столбец: Оплаченная сумма */}
                                                     <TableCell sx={cellSx}>
                                                         <TextField
                                                             variant="standard" defaultValue={trip.paid_amount || 0}
@@ -373,27 +525,37 @@ export const TripsJournal: React.FC = () => {
                                                         />
                                                     </TableCell>
 
+                                                    {/* Столбец: Общая стоимость поездки */}
                                                     <TableCell sx={cellSx}>
                                                         <TextField
                                                             variant="standard" defaultValue={trip.total_amount || 0}
                                                             onBlur={(e) => handleUpdate(trip.id, {total_amount: Number(e.target.value)})}
                                                             sx={{
                                                                 ...inputSx,
-                                                                "& .MuiInputBase-input": { textAlign: 'right', color: "#1D1D1F" }
+                                                                "& .MuiInputBase-input": {
+                                                                    textAlign: 'right',
+                                                                    color: "#1D1D1F"
+                                                                }
                                                             }}
                                                         />
                                                     </TableCell>
 
+                                                    {/* Столбец: Выбор статуса рейса */}
                                                     <TableCell sx={{...cellSx, borderRight: 'none'}}>
                                                         <Select
-                                                            value={trip.status} size="small" fullWidth variant="standard" disableUnderline
+                                                            value={trip.status} size="small" fullWidth
+                                                            variant="standard" disableUnderline
                                                             onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
                                                             renderValue={(v) => {
                                                                 const cfg = getStatusConfig(v as string);
-                                                                return (
-                                                                    <Chip label={cfg.label} color={cfg.color} size="small"
-                                                                          sx={{ fontWeight: 900, fontSize: "0.6rem", borderRadius: "8px", width: "100%", height: 22 }}/>
-                                                                );
+                                                                return <Chip label={cfg.label} color={cfg.color}
+                                                                             size="small" sx={{
+                                                                    fontWeight: 900,
+                                                                    fontSize: "0.6rem",
+                                                                    borderRadius: "8px",
+                                                                    width: "100%",
+                                                                    height: 22
+                                                                }}/>;
                                                             }}
                                                             sx={{"& .MuiSelect-select": {py: 0.5, display: 'flex'}}}
                                                         >
@@ -413,6 +575,17 @@ export const TripsJournal: React.FC = () => {
                     </AccordionDetails>
                 </Accordion>
             ))}
+
+            {/* Подключение модального окна назначения ТС */}
+            <AssignVehicleModal
+                open={assignModal.open}
+                onClose={() => setAssignModal({open: false, tripId: null, currentVehicle: null})}
+                vehicles={vehicles}
+                allTrips={trips}
+                trip={trips.find(t => t.id === assignModal.tripId) || null}
+                onAssign={handleAssignVehicle}
+                isLoading={loading}
+            />
         </Box>
     );
 };

@@ -4,12 +4,17 @@ from uuid import UUID
 from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking, BookingSource, BookingStatus
-from app.models.trip import Trip, TripStatus, PaymentStatus
+from app.models.trip import PaymentStatus, Trip, TripStatus
 from app.models.user import User, UserRole
-from app.schemas.booking import BookingCreatePublic, BookingResponse, BookingUpdate, BookingConfirm
+from app.schemas.booking import (
+    BookingConfirm,
+    BookingCreatePublic,
+    BookingResponse,
+    BookingUpdate,
+)
 from app.schemas.trip import TripResponse
-from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy import select, or_
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -18,10 +23,10 @@ router = APIRouter()
 
 @router.get("/", response_model=List[BookingResponse])
 async def read_bookings(
-        skip: int = 0,
-        limit: int = 100,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(deps.get_current_admin_user),
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_admin_user),
 ):
     query = (
         select(Booking)
@@ -30,8 +35,8 @@ async def read_bookings(
             selectinload(Booking.trips).options(
                 selectinload(Trip.stops),
                 joinedload(Trip.customer),
-                joinedload(Trip.booking)
-            )
+                joinedload(Trip.booking),
+            ),
         )
         .offset(skip)
         .limit(limit)
@@ -42,10 +47,10 @@ async def read_bookings(
 
 @router.patch("/{booking_id}", response_model=BookingResponse)
 async def update_booking(
-        booking_id: UUID,
-        booking_in: BookingUpdate,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(deps.get_current_admin_user),
+    booking_id: UUID,
+    booking_in: BookingUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_admin_user),
 ):
     query = (
         select(Booking)
@@ -54,8 +59,8 @@ async def update_booking(
             selectinload(Booking.trips).options(
                 selectinload(Trip.stops),
                 joinedload(Trip.customer),
-                joinedload(Trip.booking)
-            )
+                joinedload(Trip.booking),
+            ),
         )
         .where(Booking.id == booking_id)
     )
@@ -91,10 +96,14 @@ async def update_booking(
     return result.scalars().first()
 
 
-@router.post("/public/booking", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/public/booking",
+    response_model=BookingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_public_booking(
-        booking_in: BookingCreatePublic,
-        db: AsyncSession = Depends(get_db),
+    booking_in: BookingCreatePublic,
+    db: AsyncSession = Depends(get_db),
 ):
     conditions = [User.phone == booking_in.customer_phone]
     if booking_in.customer_email:
@@ -104,7 +113,10 @@ async def create_public_booking(
     user = result.scalars().first()
 
     if not user:
-        email_val = booking_in.customer_email or f"user_{booking_in.customer_phone}@hibinka.local"
+        email_val = (
+            booking_in.customer_email
+            or f"user_{booking_in.customer_phone}@hibinka.local"
+        )
         user = User(
             phone=booking_in.customer_phone,
             email=email_val,
@@ -120,6 +132,8 @@ async def create_public_booking(
             user.email = booking_in.customer_email
         db.add(user)
 
+    input_data = booking_in.model_dump()
+
     booking = Booking(
         customer_id=user.id,
         source=BookingSource.WEBSITE,
@@ -131,6 +145,7 @@ async def create_public_booking(
         passenger_count=booking_in.passenger_count,
         luggage_description=booking_in.luggage_description,
         notes=booking_in.notes,
+        has_trailer=input_data.get("has_trailer", False),
     )
 
     db.add(booking)
@@ -143,8 +158,8 @@ async def create_public_booking(
             selectinload(Booking.trips).options(
                 selectinload(Trip.stops),
                 joinedload(Trip.customer),
-                joinedload(Trip.booking)
-            )
+                joinedload(Trip.booking),
+            ),
         )
         .where(Booking.id == booking.id)
     )
@@ -154,7 +169,7 @@ async def create_public_booking(
 
 @router.post("/{booking_id}/confirm", response_model=TripResponse)
 async def convert_booking_to_trip(
-        booking_id: UUID, confirm_data: BookingConfirm, db: AsyncSession = Depends(get_db)
+    booking_id: UUID, confirm_data: BookingConfirm, db: AsyncSession = Depends(get_db)
 ):
     query = select(Booking).where(Booking.id == booking_id)
     result = await db.execute(query)
@@ -164,6 +179,11 @@ async def convert_booking_to_trip(
         raise HTTPException(status_code=404, detail="Заявка не найдена")
     if booking.status == BookingStatus.CONFIRMED:
         raise HTTPException(status_code=400, detail="Уже в журнале")
+
+    confirm_dict = confirm_data.model_dump()
+    needs_trailer = confirm_dict.get(
+        "has_trailer", getattr(booking, "has_trailer", False)
+    )
 
     new_trip = Trip(
         customer_id=booking.customer_id,
@@ -177,14 +197,39 @@ async def convert_booking_to_trip(
         total_amount=confirm_data.total_amount,
         paid_amount=confirm_data.paid_amount,
         status=TripStatus.PLANNED,
-        payment_status=PaymentStatus.PAID if confirm_data.paid_amount >= confirm_data.total_amount else PaymentStatus.PENDING,
+        payment_status=PaymentStatus.PAID
+        if confirm_data.paid_amount >= confirm_data.total_amount
+        else PaymentStatus.PENDING,
         is_regular=False,
+        has_trailer=needs_trailer,
     )
     db.add(new_trip)
+
+    if booking.is_round_trip and booking.return_date and booking.return_time:
+        return_trip = Trip(
+            customer_id=booking.customer_id,
+            booking_id=booking.id,
+            trip_date=booking.return_date,
+            departure_time=booking.return_time,
+            departure_location=booking.arrival_location,
+            arrival_location=booking.desired_trip_location,
+            passenger_count=booking.passenger_count,
+            notes=f"Обратный рейс (от заявки). {booking.notes or ''}",
+            total_amount=0,
+            paid_amount=0,
+            status=TripStatus.PLANNED,
+            payment_status=PaymentStatus.PENDING,
+            is_regular=False,
+            has_trailer=needs_trailer,
+        )
+        db.add(return_trip)
 
     booking.status = BookingStatus.CONFIRMED
     booking.total_amount = confirm_data.total_amount
     booking.paid_amount = confirm_data.paid_amount
+    if hasattr(booking, "has_trailer"):
+        booking.has_trailer = needs_trailer
+
     await db.commit()
 
     stmt = (
@@ -192,7 +237,7 @@ async def convert_booking_to_trip(
         .options(
             selectinload(Trip.stops),
             joinedload(Trip.booking).joinedload(Booking.customer),
-            joinedload(Trip.customer)
+            joinedload(Trip.customer),
         )
         .where(Trip.id == new_trip.id)
     )
@@ -202,9 +247,9 @@ async def convert_booking_to_trip(
 
 @router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
-        booking_id: UUID,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(deps.get_current_admin_user),
+    booking_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_admin_user),
 ):
     """Получить детали одной конкретной заявки"""
     query = (
@@ -214,8 +259,8 @@ async def get_booking(
             selectinload(Booking.trips).options(
                 selectinload(Trip.stops),
                 joinedload(Trip.customer),
-                joinedload(Trip.booking)
-            )
+                joinedload(Trip.booking),
+            ),
         )
         .where(Booking.id == booking_id)
     )
@@ -230,23 +275,25 @@ async def get_booking(
 
 @router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
-        booking_in: BookingCreatePublic,
-        db: AsyncSession = Depends(get_db),
+    booking_in: BookingCreatePublic,
+    db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.phone == booking_in.customer_phone))
+    result = await db.execute(
+        select(User).where(User.phone == booking_in.customer_phone)
+    )
     user = result.scalars().first()
 
     if not user:
         user = User(
             phone=booking_in.customer_phone,
-            email=booking_in.customer_email or f"user_{booking_in.customer_phone}@hibinka.local",
+            email=booking_in.customer_email
+            or f"user_{booking_in.customer_phone}@hibinka.local",
             account_type=UserRole.CUSTOMER,
             first_name=booking_in.customer_name,
             hashed_password="",
         )
         db.add(user)
         await db.flush()
-
 
     input_data = booking_in.model_dump()
     source_val = input_data.get("source", BookingSource.WEBSITE)
@@ -262,11 +309,16 @@ async def create_booking(
         passenger_count=booking_in.passenger_count,
         luggage_description=booking_in.luggage_description,
         notes=booking_in.notes,
+        total_amount=booking_in.total_amount,
+        paid_amount=booking_in.paid_amount,
+        is_round_trip=booking_in.is_round_trip,
+        return_date=booking_in.return_date,
+        return_time=booking_in.return_time,
+        has_trailer=input_data.get("has_trailer", False),
     )
 
     db.add(booking)
     await db.commit()
-
 
     query = (
         select(Booking)

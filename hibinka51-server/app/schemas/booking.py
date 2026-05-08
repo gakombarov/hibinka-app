@@ -1,17 +1,17 @@
-from datetime import date, time
-from typing import Optional, List
-from uuid import UUID
-from pydantic import (
-    BaseModel,
-    EmailStr,
-    Field,
-    field_validator,
-    ConfigDict,
-)
 import re
+from datetime import date, time
+from typing import List, Optional
+from uuid import UUID
 
 from app.models.booking import BookingSource, BookingStatus
 from app.schemas.trip import TripResponse
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+)
 
 
 class BookingBase(BaseModel):
@@ -29,6 +29,7 @@ class BookingBase(BaseModel):
 
     total_amount: Optional[float] = 0.0
     paid_amount: Optional[float] = 0.0
+    has_trailer: bool = False
 
 
 class BookingCreatePublic(BookingBase):
