@@ -1,20 +1,22 @@
 import enum
-from datetime import date, time, datetime
+
+from app.models.base import IsDeletedModel
 from sqlalchemy import (
+    DECIMAL,
+    Boolean,
     Column,
-    String,
     Date,
-    Time,
-    Text,
     ForeignKey,
-    Enum as SQLEnum,
     Integer,
-    Boolean, DECIMAL,
+    String,
+    Text,
+    Time,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, validates
-
-from app.models.base import IsDeletedModel
 
 
 class PaymentStatus(str, enum.Enum):
@@ -100,7 +102,7 @@ class Trip(IsDeletedModel):
 
     @validates("passenger_count")
     def validate_passagers_count(self, key, passenger_count):
-        if passenger_count <= 0:
+        if passenger_count < 0:
             raise ValueError("Должны быть пассажиры")
         return passenger_count
 

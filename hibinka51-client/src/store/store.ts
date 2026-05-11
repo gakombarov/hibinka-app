@@ -1,45 +1,49 @@
-import { configureStore } from "@reduxjs/toolkit";
+import {configureStore} from "@reduxjs/toolkit";
 import authReducer from "./authSlice";
 import bookingsReducer from "./bookingsSlice";
 import vehiclesReducer from "./vehiclesSlice";
+import tripReducer from "./tripSlice";
+import scheduledTripsReducer from "./scheduledTripsSlice";
 
 const loadState = () => {
-  try {
-    const serializedUser = localStorage.getItem("auth_user");
-    if (serializedUser === null) return undefined;
+    try {
+        const serializedUser = localStorage.getItem("auth_user");
+        if (serializedUser === null) return undefined;
 
-    return {
-      auth: {
-        token: localStorage.getItem("token"),
-        refreshToken: localStorage.getItem("refresh_token"),
-        user: JSON.parse(serializedUser),
-      },
-    };
-  } catch (err) {
-    return undefined;
-  }
+        return {
+            auth: {
+                token: localStorage.getItem("token"),
+                refreshToken: localStorage.getItem("refresh_token"),
+                user: JSON.parse(serializedUser),
+            },
+        };
+    } catch (err) {
+        return undefined;
+    }
 };
 
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    bookings: bookingsReducer,
-    vehicles: vehiclesReducer,
-  },
-  preloadedState: loadState(),
+    reducer: {
+        auth: authReducer,
+        bookings: bookingsReducer,
+        vehicles: vehiclesReducer,
+        trips: tripReducer,
+        scheduledTrips: scheduledTripsReducer,
+    },
+    preloadedState: loadState(),
 });
 
 store.subscribe(() => {
-  try {
-    const state = store.getState();
-    if (state.auth.user) {
-      localStorage.setItem("auth_user", JSON.stringify(state.auth.user));
-    } else {
-      localStorage.removeItem("auth_user");
+    try {
+        const state = store.getState();
+        if (state.auth.user) {
+            localStorage.setItem("auth_user", JSON.stringify(state.auth.user));
+        } else {
+            localStorage.removeItem("auth_user");
+        }
+    } catch (e) {
+        console.error(e);
     }
-  } catch (e) {
-    console.error(e);
-  }
 });
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -123,12 +123,52 @@ export interface BookingConfirm {
 
 
 export interface Vehicle {
-  id: string;
-  alias: string;
-  brand: string;
-  model: string;
-  license_plate: string;
-  capacity: number;
-  category: VehicleCategory;
-  is_active: boolean;
+    id: string;
+    alias: string;
+    brand: string;
+    model: string;
+    license_plate: string;
+    capacity: number;
+    category: VehicleCategory;
+    is_active: boolean;
 }
+
+export interface ScheduledTripStopCreate {
+    stop_order: number;
+    location: string;
+    stop_time?: string;
+    description?: string;
+}
+
+export interface ScheduledTripCreate {
+    route_number: number;
+    departure_location: string;
+    destination: string;
+    days_of_week: string;
+    departure_time: string;
+    price: number;
+    notes?: string;
+    is_active: boolean;
+
+    is_contract: boolean;
+    total_contract_value?: number;
+    contract_start_date?: string;
+    contract_end_date?: string;
+    show_on_landing: boolean;
+
+    stops: ScheduledTripStopCreate[];
+}
+
+export interface ScheduledTripResponse extends ScheduledTripCreate {
+    id: string;
+}
+
+export const createScheduledTrip = async (data: ScheduledTripCreate): Promise<ScheduledTripResponse> => {
+    const response = await api.post('/scheduled_trips/', data);
+    return response.data;
+};
+
+export const triggerTripsSync = async (): Promise<{ status: string; message: string }> => {
+    const response = await api.post('/scheduled_trips/sync');
+    return response.data;
+};

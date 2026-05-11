@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, Text, Time
-from sqlalchemy.orm import relationship
 from app.models.base import IsDeletedModel
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String, Text, Time
+from sqlalchemy.orm import relationship
 
 
 class ScheduledTrip(IsDeletedModel):
@@ -20,6 +20,16 @@ class ScheduledTrip(IsDeletedModel):
     price = Column(Integer, nullable=False, comment="Стоимость проезда")
     is_active = Column(Boolean, default=True, comment="Показывать ли рейс на сайте")
     notes = Column(Text, nullable=True, comment="Заметки")
+    contract_start_date = Column(Date, nullable=True, comment="Дата начала контракта")
+    total_contract_value = Column(
+        Integer, nullable=True, comment="Общая сумма контракта"
+    )
+    show_on_landing = Column(
+        Boolean, default=False, comment="Показывать на лендинге как инфо"
+    )
+    contract_end_date = Column(
+        Date, nullable=True, comment="Дата окончания действия расписания/контракта"
+    )
 
     stops = relationship(
         "ScheduledTripStop",

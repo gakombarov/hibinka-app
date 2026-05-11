@@ -1,7 +1,8 @@
+from datetime import date, time
 from typing import List, Optional
-from datetime import time
-from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScheduledTripStopBase(BaseModel):
@@ -14,44 +15,50 @@ class ScheduledTripStopBase(BaseModel):
 
 
 class SchedulerTripStopCreate(ScheduledTripStopBase):
-    """Схема для создания остановки."""
-
     pass
 
 
 class ScheduledTripStopResponse(ScheduledTripStopBase):
-    """Схема для ответа с данными об остановке."""
-
     id: UUID
-
     model_config = ConfigDict(from_attributes=True)
 
 
 class ScheduledTripBase(BaseModel):
-    """Базовая схема для регулярного рейса."""
-
     route_number: int = Field(..., description="Номер маршрута")
-    departure_location: str = Field(..., min_length=2, description="Место отправления")
-    destination: str = Field(..., min_length=2, description="Место назначения")
-    days_of_week: str = Field(..., min_length=2, description="Дни недели")
-    departure_time: time = Field(
-        ..., description="Время отправления из начальной точки"
-    )
-    price: int = Field(..., description="Стоимость проезда")
+    departure_location: str = Field(..., min_length=2)
+    destination: str = Field(..., min_length=2)
+    days_of_week: str = Field(..., description="Например: 'Пн, Ср, Пт'")
+    departure_time: time
+    price: int = Field(0, description="Рассчитанная стоимость одной поездки")
     notes: Optional[str] = None
     is_active: bool = True
+    show_on_landing: bool = False
+    contract_start_date: Optional[date] = None
+    contract_end_date: Optional[date] = None
+    total_contract_value: Optional[int] = None
 
 
 class ScheduledTripCreate(ScheduledTripBase):
-    """Схема для создания рейса (включает список остановок)."""
-
     stops: List[SchedulerTripStopCreate] = []
 
 
-class ScheduledTripResponse(ScheduledTripBase):
-    """Схема для ответа (включает список остановок с ID)."""
+class ScheduledTripUpdate(BaseModel):
+    route_number: Optional[int] = None
+    departure_location: Optional[str] = None
+    destination: Optional[str] = None
+    days_of_week: Optional[str] = None
+    departure_time: Optional[time] = None
+    price: Optional[int] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+    show_on_landing: Optional[bool] = None
+    contract_start_date: Optional[date] = None
+    contract_end_date: Optional[date] = None
+    total_contract_value: Optional[int] = None
+    stops: Optional[List[SchedulerTripStopCreate]] = None
 
+
+class ScheduledTripResponse(ScheduledTripBase):
     id: UUID
     stops: List[ScheduledTripStopResponse] = []
-
     model_config = ConfigDict(from_attributes=True)
