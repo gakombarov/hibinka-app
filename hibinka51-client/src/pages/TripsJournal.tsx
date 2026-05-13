@@ -53,8 +53,8 @@ const COLORS = {
 };
 
 const COLS = {
-    TIME: 75, ROUTE: 280, CLIENT: 160, PASS: 60,
-    TRAIL: 50, AUTO: 130, DRIVER: 130, PAID: 110,
+    TIME: 80, ROUTE: 300, CLIENT: 180, PASS: 60,
+    TRAIL: 50, AUTO: 140, DRIVER: 140, PAID: 110,
     TOTAL: 95, STATUS: 150,
 };
 
@@ -173,29 +173,16 @@ export const TripsJournal: React.FC = () => {
 
         return (
             <Paper elevation={0} sx={{
-                p: 2,
-                mb: 2,
-                borderRadius: "18px",
-                border: `1px solid ${COLORS.BORDER}`,
-                bgcolor: COLORS.CARD_BG
+                p: 2, mb: 2, borderRadius: "18px",
+                border: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.CARD_BG
             }}>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
-                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <AccessTimeIcon sx={{fontSize: 16, color: COLORS.ACCENT_YELLOW}}/>
-                        <InputBase
-                            type="time" defaultValue={trip.departure_time.slice(0, 5)}
-                            onBlur={(e) => handleUpdate(trip.id, {departure_time: e.target.value})}
-                            inputProps={{
-                                style: {
-                                    padding: 0,
-                                    fontWeight: 900,
-                                    fontSize: "1.1rem",
-                                    width: '95px',
-                                    textAlign: 'center'
-                                }
-                            }}
-                        />
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <AccessTimeIcon sx={{fontSize: 20, color: COLORS.ACCENT_YELLOW}}/>
+                        <Typography variant="h6" fontWeight="900" sx={{color: COLORS.TEXT_MAIN}}>
+                            {trip.departure_time.slice(0, 5)}
+                        </Typography>
                     </Stack>
                     <Select
                         value={trip.status} size="small" variant="standard" disableUnderline
@@ -214,13 +201,17 @@ export const TripsJournal: React.FC = () => {
                     </Select>
                 </Stack>
 
-                <Typography variant="body1" fontWeight="900" sx={{mb: 1, letterSpacing: "-0.02em"}}>
-                    {trip.departure_location} <br/>
-                    <Typography component="span"
-                                sx={{color: COLORS.ACCENT_YELLOW, fontSize: "1.2rem", lineHeight: 0}}>↓</Typography>
-                    <br/>
-                    {trip.arrival_location}
-                </Typography>
+                <Box sx={{mb: 1.5}}>
+                    <Typography variant="body1" fontWeight="900" sx={{letterSpacing: "-0.02em", lineHeight: 1.2}}>
+                        {trip.departure_location} → {trip.arrival_location}
+                    </Typography>
+                    {trip.stops && trip.stops.length > 0 && (
+                        <Typography variant="caption"
+                                    sx={{display: 'block', mt: 0.5, color: COLORS.TEXT_SECONDARY, fontWeight: 700}}>
+                            📍 {[...trip.stops].sort((a, b) => a.stop_order - b.stop_order).map(s => s.location).join(' • ')}
+                        </Typography>
+                    )}
+                </Box>
 
                 <Divider sx={{my: 1.5, opacity: 0.5}}/>
 
@@ -273,12 +264,8 @@ export const TripsJournal: React.FC = () => {
                                 <Typography fontWeight="900"
                                             sx={{color: COLORS.SUCCESS_GREEN}}>{trip.total_amount} ₽</Typography>
                                 <Chip label="ТЕНДЕР" size="small" sx={{
-                                    bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1),
-                                    color: COLORS.SUCCESS_GREEN,
-                                    fontWeight: 900,
-                                    fontSize: '0.6rem',
-                                    height: 20,
-                                    borderRadius: '4px'
+                                    bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1), color: COLORS.SUCCESS_GREEN,
+                                    fontWeight: 900, fontSize: '0.6rem', height: 20, borderRadius: '4px'
                                 }}/>
                             </Stack>
                         ) : (
@@ -348,12 +335,9 @@ export const TripsJournal: React.FC = () => {
                     <AccordionSummary
                         expandIcon={<ExpandMoreIcon/>}
                         sx={{
-                            bgcolor: COLORS.ACCENT_YELLOW,
-                            borderRadius: "16px",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                            mb: 1.5,
-                            minHeight: 48,
-                            "&.Mui-expanded": {minHeight: 48}
+                            bgcolor: COLORS.ACCENT_YELLOW, borderRadius: "16px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.05)", mb: 1.5,
+                            minHeight: 48, "&.Mui-expanded": {minHeight: 48}
                         }}
                     >
                         <Typography variant="subtitle1" fontWeight="900" color="black">
@@ -370,10 +354,8 @@ export const TripsJournal: React.FC = () => {
                             </Box>
                         ) : (
                             <TableContainer component={Paper} sx={{
-                                borderRadius: "20px",
-                                overflow: "hidden",
-                                boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
-                                border: `1px solid ${COLORS.BORDER}`
+                                borderRadius: "20px", overflow: "hidden",
+                                boxShadow: "0 10px 30px rgba(0,0,0,0.04)", border: `1px solid ${COLORS.BORDER}`
                             }}>
                                 <Table sx={{tableLayout: "fixed", minWidth: 1100, borderCollapse: 'collapse'}}>
                                     <TableHead sx={{bgcolor: "#FBFBFC"}}>
@@ -428,23 +410,29 @@ export const TripsJournal: React.FC = () => {
                                                     "&:hover": {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05)}
                                                 }}>
                                                     <TableCell sx={cellSx}>
-                                                        <TextField
-                                                            variant="standard"
-                                                            defaultValue={trip.departure_time.slice(0, 5)}
-                                                            onBlur={(e) => handleUpdate(trip.id, {departure_time: e.target.value})}
-                                                            sx={{
-                                                                ...inputSx,
-                                                                "& .MuiInputBase-input": {
-                                                                    textAlign: 'left',
-                                                                    fontWeight: 900
-                                                                }
-                                                            }}
-                                                        />
+                                                        <Stack direction="row" spacing={0.5} alignItems="center">
+                                                            <AccessTimeIcon
+                                                                sx={{fontSize: 14, color: COLORS.ACCENT_YELLOW}}/>
+                                                            <Typography variant="body2" fontWeight="900">
+                                                                {trip.departure_time.slice(0, 5)}
+                                                            </Typography>
+                                                        </Stack>
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
                                                         <Typography variant="body2" fontWeight="900" color="#1D1D1F">
                                                             {trip.departure_location} → {trip.arrival_location}
                                                         </Typography>
+                                                        {trip.stops && trip.stops.length > 0 && (
+                                                            <Typography variant="caption" sx={{
+                                                                fontSize: '0.65rem',
+                                                                display: 'block',
+                                                                mt: 0.2,
+                                                                color: COLORS.TEXT_SECONDARY,
+                                                                fontWeight: 700
+                                                            }}>
+                                                                📍 {[...trip.stops].sort((a, b) => a.stop_order - b.stop_order).map(s => s.location).join(' • ')}
+                                                            </Typography>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
                                                         <Stack direction="row" spacing={1} alignItems="center">
@@ -472,28 +460,25 @@ export const TripsJournal: React.FC = () => {
                                                         </Stack>
                                                     </TableCell>
                                                     <TableCell sx={{...cellSx, textAlign: 'center'}}>
-                                                        <TextField
-                                                            type="number" variant="standard"
-                                                            defaultValue={trip.passenger_count}
-                                                            onBlur={(e) => handleUpdate(trip.id, {passenger_count: Number(e.target.value)})}
-                                                            sx={inputSx}
+                                                        <TextField type="number" variant="standard"
+                                                                   defaultValue={trip.passenger_count}
+                                                                   onBlur={(e) => handleUpdate(trip.id, {passenger_count: Number(e.target.value)})}
+                                                                   sx={inputSx}
                                                         />
                                                     </TableCell>
                                                     <TableCell sx={{...cellSx, textAlign: 'center'}}>
-                                                        <Checkbox
-                                                            size="small" checked={Boolean(trip.has_trailer)}
-                                                            onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
-                                                            sx={{borderRadius: "4px"}}
+                                                        <Checkbox size="small" checked={Boolean(trip.has_trailer)}
+                                                                  onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
+                                                                  sx={{borderRadius: "4px"}}
                                                         />
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
-                                                        <Button
-                                                            fullWidth {...getAssignButtonProps(isVehicleAssigned)}
-                                                            onClick={() => setAssignModal({
-                                                                open: true,
-                                                                tripId: trip.id,
-                                                                currentVehicle: vehicleObj || null
-                                                            })}
+                                                        <Button fullWidth {...getAssignButtonProps(isVehicleAssigned)}
+                                                                onClick={() => setAssignModal({
+                                                                    open: true,
+                                                                    tripId: trip.id,
+                                                                    currentVehicle: vehicleObj || null
+                                                                })}
                                                         >
                                                             {vehicleDisplay}
                                                         </Button>
@@ -502,22 +487,18 @@ export const TripsJournal: React.FC = () => {
                                                         <Button fullWidth {...getAssignButtonProps(false)}>Выбрать
                                                             вод.</Button>
                                                     </TableCell>
-
-                                                    {/* ОПЛАТА ПО КОНТРАКТУ */}
                                                     <TableCell sx={cellSx}>
                                                         {isContractTrip ? (
                                                             <Box sx={{textAlign: 'right'}}>
-                                                                <Chip
-                                                                    label={`${trip.total_amount} ₽`}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        fontWeight: 900,
-                                                                        borderRadius: "6px",
-                                                                        width: "100%",
-                                                                        bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1),
-                                                                        color: COLORS.SUCCESS_GREEN,
-                                                                        border: `1px solid ${alpha(COLORS.SUCCESS_GREEN, 0.2)}`
-                                                                    }}
+                                                                <Chip label={`${trip.total_amount} ₽`} size="small"
+                                                                      sx={{
+                                                                          fontWeight: 900,
+                                                                          borderRadius: "6px",
+                                                                          width: "100%",
+                                                                          bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1),
+                                                                          color: COLORS.SUCCESS_GREEN,
+                                                                          border: `1px solid ${alpha(COLORS.SUCCESS_GREEN, 0.2)}`
+                                                                      }}
                                                                 />
                                                                 <Typography variant="caption" sx={{
                                                                     fontSize: '0.55rem',
@@ -526,49 +507,44 @@ export const TripsJournal: React.FC = () => {
                                                                     display: 'block',
                                                                     mt: 0.5,
                                                                     textAlign: 'center'
-                                                                }}>
-                                                                    КОНТРАКТ
-                                                                </Typography>
+                                                                }}>КОНТРАКТ</Typography>
                                                             </Box>
                                                         ) : (
-                                                            <TextField
-                                                                variant="standard" defaultValue={trip.paid_amount || 0}
-                                                                onBlur={(e) => handleUpdate(trip.id, {paid_amount: Number(e.target.value)})}
-                                                                sx={{
-                                                                    ...inputSx,
-                                                                    "& .MuiInputBase-input": {
-                                                                        textAlign: 'right',
-                                                                        color: isFullyPaid ? COLORS.SUCCESS_GREEN : "#FF3B30"
-                                                                    }
-                                                                }}
+                                                            <TextField variant="standard"
+                                                                       defaultValue={trip.paid_amount || 0}
+                                                                       onBlur={(e) => handleUpdate(trip.id, {paid_amount: Number(e.target.value)})}
+                                                                       sx={{
+                                                                           ...inputSx,
+                                                                           "& .MuiInputBase-input": {
+                                                                               textAlign: 'right',
+                                                                               color: isFullyPaid ? COLORS.SUCCESS_GREEN : "#FF3B30"
+                                                                           }
+                                                                       }}
                                                             />
                                                         )}
                                                     </TableCell>
-
                                                     <TableCell sx={cellSx}>
                                                         <Typography fontWeight="900" textAlign="right"
                                                                     sx={{color: COLORS.TEXT_MAIN, pr: 1}}>
                                                             {trip.total_amount} ₽
                                                         </Typography>
                                                     </TableCell>
-
                                                     <TableCell sx={{...cellSx, borderRight: 'none'}}>
-                                                        <Select
-                                                            value={trip.status} size="small" fullWidth
-                                                            variant="standard" disableUnderline
-                                                            onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
-                                                            renderValue={(v) => {
-                                                                const cfg = getStatusConfig(v as string);
-                                                                return <Chip label={cfg.label} color={cfg.color}
-                                                                             size="small" sx={{
-                                                                    fontWeight: 900,
-                                                                    fontSize: "0.6rem",
-                                                                    borderRadius: "8px",
-                                                                    width: "100%",
-                                                                    height: 22
-                                                                }}/>;
-                                                            }}
-                                                            sx={{"& .MuiSelect-select": {py: 0.5, display: 'flex'}}}
+                                                        <Select value={trip.status} size="small" fullWidth
+                                                                variant="standard" disableUnderline
+                                                                onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
+                                                                renderValue={(v) => {
+                                                                    const cfg = getStatusConfig(v as string);
+                                                                    return <Chip label={cfg.label} color={cfg.color}
+                                                                                 size="small" sx={{
+                                                                        fontWeight: 900,
+                                                                        fontSize: "0.6rem",
+                                                                        borderRadius: "8px",
+                                                                        width: "100%",
+                                                                        height: 22
+                                                                    }}/>;
+                                                                }}
+                                                                sx={{"& .MuiSelect-select": {py: 0.5, display: 'flex'}}}
                                                         >
                                                             <MenuItem value="PLANNED">ОЖИДАНИЕ</MenuItem>
                                                             <MenuItem value="IN_PROGRESS">В ПУТИ</MenuItem>

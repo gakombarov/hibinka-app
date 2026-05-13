@@ -8,6 +8,7 @@ from app.models.trip import PaymentStatus, Trip, TripStatus
 from app.models.user import User, UserRole
 from app.schemas.booking import (
     BookingConfirm,
+    BookingCreateAdmin,
     BookingCreatePublic,
     BookingResponse,
     BookingUpdate,
@@ -105,6 +106,7 @@ async def create_public_booking(
     booking_in: BookingCreatePublic,
     db: AsyncSession = Depends(get_db),
 ):
+    """Эндпоинт для Лендинга: здесь телефон обязателен"""
     conditions = [User.phone == booking_in.customer_phone]
     if booking_in.customer_email:
         conditions.append(User.email == booking_in.customer_email)
@@ -275,19 +277,27 @@ async def get_booking(
 
 @router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
-    booking_in: BookingCreatePublic,
+    booking_in: BookingCreateAdmin,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User).where(User.phone == booking_in.customer_phone)
-    )
-    user = result.scalars().first()
+    """Эндпоинт для Диспетчера: телефон НЕОБЯЗАТЕЛЕН"""
+    user = None
+
+    if booking_in.customer_phone:
+        result = await db.execute(
+            select(User).where(User.phone == booking_in.customer_phone)
+        )
+        user = result.scalars().first()
 
     if not user:
+        import uuid
+
+        random_id = str(uuid.uuid4())[:8]
+        email_val = booking_in.customer_email or f"manual_{random_id}@hibinka.local"
+
         user = User(
             phone=booking_in.customer_phone,
-            email=booking_in.customer_email
-            or f"user_{booking_in.customer_phone}@hibinka.local",
+            email=email_val,
             account_type=UserRole.CUSTOMER,
             first_name=booking_in.customer_name,
             hashed_password="",
@@ -296,7 +306,7 @@ async def create_booking(
         await db.flush()
 
     input_data = booking_in.model_dump()
-    source_val = input_data.get("source", BookingSource.WEBSITE)
+    source_val = input_data.get("source", BookingSource.PHONE)
 
     booking = Booking(
         customer_id=user.id,

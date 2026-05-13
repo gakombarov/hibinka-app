@@ -1,9 +1,9 @@
 from datetime import date, time
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 
-from app.models.trip import TripStatus, PaymentStatus
-from pydantic import BaseModel, Field, ConfigDict, computed_field
+from app.models.trip import PaymentStatus, TripStatus
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class TripCustomerInfo(BaseModel):
@@ -22,6 +22,7 @@ class TripBookingInfo(BaseModel):
 class TripStopBase(BaseModel):
     location: str
     stop_order: int
+    stop_time: Optional[time] = None
 
 
 class TripBase(BaseModel):

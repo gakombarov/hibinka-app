@@ -1,7 +1,8 @@
 import enum
-from sqlalchemy import Column, String, Boolean, DateTime, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+
 from app.models.base import IsDeletedModel
+from sqlalchemy import Boolean, Column, String
+from sqlalchemy import Enum as SQLEnum
 
 
 class UserRole(str, enum.Enum):
@@ -15,7 +16,7 @@ class User(IsDeletedModel):
 
     __tablename__ = "users"
 
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)

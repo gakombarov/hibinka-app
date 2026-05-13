@@ -1,15 +1,15 @@
 import React, {forwardRef, useState} from "react";
 import {
-  Box,
-  Button,
-  Divider,
-  FormControlLabel,
-  Grid,
-  MenuItem,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
+    Box,
+    Button,
+    Divider,
+    FormControlLabel,
+    Grid,
+    MenuItem,
+    Stack,
+    Switch,
+    TextField,
+    Typography,
 } from "@mui/material";
 import {DatePicker, LocalizationProvider, TimePicker,} from "@mui/x-date-pickers";
 import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
@@ -58,17 +58,26 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
     });
 
     const handleSubmit = async () => {
-        if (!form.customer_name || form.customer_phone.length < 10) {
-            alert("Введите корректное имя и телефон");
+        if (!form.customer_name || form.customer_name.length < 2) {
+            alert("Введите имя клиента");
             return;
         }
+
         try {
             setLoading(true);
-            await createAdminBooking(form);
+            
+            const digits = form.customer_phone.replace(/\D/g, "");
+            const finalForm = {
+                ...form,
+                customer_phone: digits.length > 1 ? form.customer_phone : null
+            };
+
+            await createAdminBooking(finalForm);
             onSuccess();
             onClose();
-        } catch (e) {
-            alert("Ошибка при создании");
+        } catch (e: any) {
+            const errorMsg = e.response?.data?.detail?.[0]?.msg || "Ошибка при создании";
+            alert(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -79,18 +88,19 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
             <Modal open={open} onClose={onClose} title="Новая заявка (Диспетчер)">
                 <Box sx={{mt: 1, p: 1}}>
                     <Grid container spacing={2}>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Имя клиента"
                                 fullWidth
                                 size="small"
+                                required
                                 value={form.customer_name}
                                 onChange={(e) =>
                                     setForm({...form, customer_name: e.target.value})
                                 }
                             />
                         </Grid>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Телефон"
                                 fullWidth
@@ -103,7 +113,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             />
                         </Grid>
 
-                        <Grid size={{xs: 12}}>
+                        <Grid item xs={12}>
                             <TextField
                                 select
                                 label="Источник"
@@ -117,7 +127,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             </TextField>
                         </Grid>
 
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Откуда"
                                 fullWidth
@@ -128,7 +138,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                                 }
                             />
                         </Grid>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Куда"
                                 fullWidth
@@ -140,8 +150,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             />
                         </Grid>
 
-                        {/* НОВЫЕ ПОЛЯ: Пассажиры и Прицеп */}
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Количество мест"
                                 type="number"
@@ -154,10 +163,9 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                                         passenger_count: e.target.value === "" ? 0 : Number(e.target.value),
                                     })
                                 }
-                                onFocus={(e) => e.target.select()}
                             />
                         </Grid>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6} sx={{display: 'flex', alignItems: 'center'}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -170,9 +178,8 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                                 label={<Typography variant="body2" fontWeight="bold">Нужен прицеп</Typography>}
                             />
                         </Grid>
-                        {/* --------------------------------- */}
 
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <DatePicker
                                 label="Дата туда"
                                 format="DD.MM.YYYY"
@@ -186,7 +193,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                                 slotProps={{textField: {size: "small", fullWidth: true}}}
                             />
                         </Grid>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TimePicker
                                 label="Время"
                                 ampm={false}
@@ -201,7 +208,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             />
                         </Grid>
 
-                        <Grid size={{xs: 12}}>
+                        <Grid item xs={12}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -221,7 +228,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
 
                         {form.is_round_trip && (
                             <>
-                                <Grid size={{xs: 6}}>
+                                <Grid item xs={6}>
                                     <DatePicker
                                         label="Дата обратно"
                                         format="DD.MM.YYYY"
@@ -237,7 +244,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                                         }}
                                     />
                                 </Grid>
-                                <Grid size={{xs: 6}}>
+                                <Grid item xs={6}>
                                     <TimePicker
                                         label="Время обратно"
                                         ampm={false}
@@ -256,49 +263,45 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             </>
                         )}
 
-                        <Grid size={{xs: 12}}>
+                        <Grid item xs={12}>
                             <Divider sx={{my: 1}}/>
                             <Typography variant="subtitle2" color="primary">
                                 Финансы
                             </Typography>
                         </Grid>
 
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Итого (₽)"
                                 type="number"
                                 fullWidth
                                 size="small"
                                 value={form.total_amount === 0 ? "" : form.total_amount}
-                                onFocus={(e) => e.target.select()}
                                 onChange={(e) =>
                                     setForm({
                                         ...form,
-                                        total_amount:
-                                            e.target.value === "" ? 0 : Number(e.target.value),
+                                        total_amount: e.target.value === "" ? 0 : Number(e.target.value),
                                     })
                                 }
                             />
                         </Grid>
-                        <Grid size={{xs: 6}}>
+                        <Grid item xs={6}>
                             <TextField
                                 label="Аванс (₽)"
                                 type="number"
                                 fullWidth
                                 size="small"
                                 value={form.paid_amount === 0 ? "" : form.paid_amount}
-                                onFocus={(e) => e.target.select()}
                                 onChange={(e) =>
                                     setForm({
                                         ...form,
-                                        paid_amount:
-                                            e.target.value === "" ? 0 : Number(e.target.value),
+                                        paid_amount: e.target.value === "" ? 0 : Number(e.target.value),
                                     })
                                 }
                             />
                         </Grid>
 
-                        <Grid size={{xs: 12}}>
+                        <Grid item xs={12}>
                             <TextField
                                 label="Заметки"
                                 fullWidth
@@ -310,7 +313,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
                             />
                         </Grid>
 
-                        <Grid size={{xs: 12}} sx={{mt: 2}}>
+                        <Grid item xs={12} sx={{mt: 2}}>
                             <Stack direction="row" spacing={2}>
                                 <Button
                                     variant="contained"

@@ -1,8 +1,9 @@
+import uuid
 from datetime import date, timedelta
 
 from app.models.scheduled_trip import ScheduledTrip
 from app.models.trip import Trip, TripStop
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,57 +22,84 @@ def parse_days(days_str: str) -> list[int]:
 
 async def generate_trips_from_schedule(db: AsyncSession, days_ahead: int = 14):
     today = date.today()
-    max_date = today + timedelta(days=days_ahead)
+    limit_date = today + timedelta(days=days_ahead)
 
     stmt = (
         select(ScheduledTrip)
         .where(ScheduledTrip.is_active == True)
-        .options(selectinload(ScheduledTrip.stops))
+        .options(selectinload(ScheduledTrip.stops), selectinload(ScheduledTrip.cycles))
     )
     result = await db.execute(stmt)
     schedules = result.scalars().all()
 
     for schedule in schedules:
-        active_days = parse_days(schedule.days_of_week)
+        await db.execute(
+            delete(Trip).where(
+                Trip.scheduled_trip_id == schedule.id,
+                Trip.status == "PLANNED",
+                Trip.trip_date >= today,
+                Trip.trip_date <= limit_date,
+            )
+        )
 
-        end_date = max_date
-        if schedule.contract_end_date:
-            end_date = min(max_date, schedule.contract_end_date)
+        price_per_leg = schedule.price // 2 if schedule.price else 0
 
-        current_date = today
-        while current_date <= end_date:
-            if current_date.weekday() in active_days:
-                exists_stmt = select(Trip).where(
-                    Trip.scheduled_trip_id == schedule.id,
-                    Trip.trip_date == current_date,
-                )
-                exists_result = await db.execute(exists_stmt)
-                exists = exists_result.scalars().first()
+        current_date = max(schedule.contract_start_date, today)
+        end_generation_date = min(schedule.contract_end_date, limit_date)
 
-                if not exists:
-                    new_trip = Trip(
-                        scheduled_trip_id=schedule.id,
-                        trip_date=current_date,
-                        departure_time=schedule.departure_time,
-                        departure_location=schedule.departure_location,
-                        arrival_location=schedule.destination,
-                        passenger_count=0,
-                        is_regular=True,
-                        show_on_landing=schedule.show_on_landing,
-                        status="PLANNED",
-                        total_amount=schedule.price,
+        while current_date <= end_generation_date:
+            weekday = current_date.weekday()
+
+            for cycle in schedule.cycles:
+                active_days = parse_days(cycle.days_of_week)
+
+                if weekday in active_days:
+                    forward_id = str(uuid.uuid4())
+                    db.add(
+                        Trip(
+                            id=forward_id,
+                            scheduled_trip_id=schedule.id,
+                            trip_date=current_date,
+                            departure_time=cycle.departure_time,
+                            departure_location=schedule.departure_location,
+                            arrival_location=schedule.destination,
+                            passenger_count=0,
+                            is_regular=True,
+                            show_on_landing=schedule.show_on_landing,
+                            status="PLANNED",
+                            total_amount=price_per_leg,
+                            paid_amount=price_per_leg,
+                        )
                     )
-                    db.add(new_trip)
-                    await db.flush()
+
+                    return_id = str(uuid.uuid4())
+                    db.add(
+                        Trip(
+                            id=return_id,
+                            scheduled_trip_id=schedule.id,
+                            trip_date=current_date,
+                            departure_time=cycle.return_time,
+                            departure_location=schedule.destination,
+                            arrival_location=schedule.departure_location,
+                            passenger_count=0,
+                            is_regular=True,
+                            show_on_landing=schedule.show_on_landing,
+                            status="PLANNED",
+                            total_amount=price_per_leg,
+                            paid_amount=price_per_leg,
+                        )
+                    )
 
                     for s_stop in schedule.stops:
                         db.add(
                             TripStop(
-                                trip_id=new_trip.id,
+                                trip_id=forward_id,
                                 location=s_stop.location,
                                 stop_order=s_stop.stop_order,
+                                stop_time=s_stop.stop_time,
                             )
                         )
+
             current_date += timedelta(days=1)
 
     await db.commit()

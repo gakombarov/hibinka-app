@@ -34,10 +34,9 @@ class TripStatus(str, enum.Enum):
 class Trip(IsDeletedModel):
     __tablename__ = "trips"
 
-    # --- Связи ---
     scheduled_trip_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("scheduled_trips.id", ondelete="SET NULL"),
+        ForeignKey("scheduled_trips.id", ondelete="CASCADE"),
         nullable=True,
     )
     customer_id = Column(
@@ -58,7 +57,6 @@ class Trip(IsDeletedModel):
     #     UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     # )
 
-    # --- Маршрут конкретной машины ---
     trip_date = Column(Date, nullable=False, comment="Дата поездки")
     departure_time = Column(Time, nullable=False, comment="Время старта")
     departure_location = Column(String(255), nullable=False)
@@ -67,7 +65,6 @@ class Trip(IsDeletedModel):
         Integer, nullable=False, default=0, comment="Количество пассажиров в авто"
     )
 
-    # --- Финансы ---
     total_amount = Column(
         DECIMAL(10, 2), nullable=True, default=0, comment="Итого к оплате за поездку"
     )
@@ -75,7 +72,6 @@ class Trip(IsDeletedModel):
         DECIMAL(10, 2), nullable=True, default=0, comment="Выплаченная сумма"
     )
 
-    # --- Статусы и флаги ---
     is_regular = Column(Boolean, default=False, comment="Регулярный маршрут?")
     status = Column(SQLEnum(TripStatus), default=TripStatus.PLANNED, nullable=False)
     payment_status = Column(
@@ -115,5 +111,6 @@ class TripStop(IsDeletedModel):
     )
     location = Column(String(255), nullable=False)
     stop_order = Column(Integer, nullable=False)
+    stop_time = Column(Time, nullable=True, comment="Время прибытия на остановку")
 
     trip = relationship("Trip", back_populates="stops")

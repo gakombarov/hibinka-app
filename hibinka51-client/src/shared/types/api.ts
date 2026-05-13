@@ -136,31 +136,49 @@ export interface Vehicle {
 export interface ScheduledTripStopCreate {
     stop_order: number;
     location: string;
-    stop_time?: string;
-    description?: string;
+    stop_time?: string | null;
+    description?: string | null;
+}
+
+export interface ScheduledTripStopResponse extends ScheduledTripStopCreate {
+    id: string;
+    schedule_id: string;
+}
+
+export interface ScheduledTripCycleCreate {
+    days_of_week: string;
+    departure_time: string;
+    return_time: string;
+}
+
+export interface ScheduledTripCycleResponse extends ScheduledTripCycleCreate {
+    id: string;
+    schedule_id: string;
 }
 
 export interface ScheduledTripCreate {
     route_number: number;
+    client_name?: string | null;
     departure_location: string;
     destination: string;
-    days_of_week: string;
-    departure_time: string;
-    price: number;
-    notes?: string;
+
+    total_contract_value: number;
+    contract_start_date: string;
+    contract_end_date: string;
+
     is_active: boolean;
-
-    is_contract: boolean;
-    total_contract_value?: number;
-    contract_start_date?: string;
-    contract_end_date?: string;
     show_on_landing: boolean;
+    notes?: string | null;
 
+    cycles: ScheduledTripCycleCreate[];
     stops: ScheduledTripStopCreate[];
 }
 
-export interface ScheduledTripResponse extends ScheduledTripCreate {
+export interface ScheduledTripResponse extends Omit<ScheduledTripCreate, 'cycles' | 'stops'> {
     id: string;
+    price: number;
+    cycles: ScheduledTripCycleResponse[];
+    stops: ScheduledTripStopResponse[];
 }
 
 export const createScheduledTrip = async (data: ScheduledTripCreate): Promise<ScheduledTripResponse> => {
