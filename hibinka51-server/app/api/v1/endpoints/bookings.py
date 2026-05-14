@@ -14,7 +14,7 @@ from app.schemas.booking import (
     BookingUpdate,
 )
 from app.schemas.trip import TripResponse
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -26,22 +26,25 @@ router = APIRouter()
 async def read_bookings(
     skip: int = 0,
     limit: int = 100,
+    include_cancelled: bool = Query(False, alias="include_cancelled"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin_user),
 ):
-    query = (
-        select(Booking)
-        .options(
-            joinedload(Booking.customer),
-            selectinload(Booking.trips).options(
-                selectinload(Trip.stops),
-                joinedload(Trip.customer),
-                joinedload(Trip.booking),
-            ),
-        )
-        .offset(skip)
-        .limit(limit)
+    print(f"🔥 DEBUG BACKEND: GET /bookings/ | include_cancelled = {include_cancelled}")
+
+    query = select(Booking).options(
+        joinedload(Booking.customer),
+        selectinload(Booking.trips).options(
+            selectinload(Trip.stops),
+            joinedload(Trip.customer),
+            joinedload(Trip.booking),
+        ),
     )
+
+    if not include_cancelled:
+        query = query.where(Booking.status != BookingStatus.CANCELLED)
+
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().unique().all()
 

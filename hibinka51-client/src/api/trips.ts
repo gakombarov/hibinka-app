@@ -1,9 +1,10 @@
 import apiClient from "./client";
-import { Trip } from "../shared/types/api";
 
 export const tripsApi = {
-    getAll: async () => {
-        const response = await apiClient.get("/trips/");
+    getAll: async (includeCancelled: boolean = false) => {
+        const response = await apiClient.get("/trips/", {
+            params: {include_cancelled: includeCancelled}
+        });
         return response.data;
     },
 

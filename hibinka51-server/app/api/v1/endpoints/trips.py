@@ -4,7 +4,7 @@ from uuid import UUID
 from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking
-from app.models.trip import PaymentStatus, Trip
+from app.models.trip import PaymentStatus, Trip, TripStatus
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.trip import TripResponse, TripUpdate
@@ -20,6 +20,7 @@ router = APIRouter()
 async def get_trips(
     skip: int = 0,
     limit: int = 100,
+    include_cancelled: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin_user),
 ):
@@ -31,10 +32,16 @@ async def get_trips(
             joinedload(Trip.customer),
         )
         .where(Trip.is_deleted == False)
-        .order_by(Trip.trip_date.desc(), Trip.departure_time.asc())
+    )
+    if not include_cancelled:
+        query = query.where(Trip.status != TripStatus.CANCELLED)
+
+    query = (
+        query.order_by(Trip.trip_date.desc(), Trip.departure_time.asc())
         .offset(skip)
         .limit(limit)
     )
+
     result = await db.execute(query)
     trips_list = result.scalars().all()
 

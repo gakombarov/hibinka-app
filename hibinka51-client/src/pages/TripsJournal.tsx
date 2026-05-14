@@ -11,12 +11,14 @@ import {
     Chip,
     CircularProgress,
     Divider,
+    FormControlLabel,
     IconButton,
     InputBase,
     MenuItem,
     Paper,
     Select,
     Stack,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -67,6 +69,10 @@ export const TripsJournal: React.FC = () => {
     const [trips, setTrips] = useState<TripResponse[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [showCancelled, setShowCancelled] = useState(() => {
+        return localStorage.getItem('showCancelledTrips') === 'true';
+    });
+
     const [assignModal, setAssignModal] = useState<{
         open: boolean;
         tripId: string | null;
@@ -77,10 +83,11 @@ export const TripsJournal: React.FC = () => {
         currentVehicle: null
     });
 
-    const loadData = async () => {
+    const loadData = async (includeCancelled: boolean) => {
         try {
+            setLoading(true);
             const [tripsData, vehiclesData] = await Promise.all([
-                tripsApi.getAll(),
+                tripsApi.getAll(includeCancelled),
                 vehiclesApi.getAll()
             ]);
             setTrips(tripsData);
@@ -93,15 +100,20 @@ export const TripsJournal: React.FC = () => {
     }
 
     useEffect(() => {
-        loadData();
-    }, []);
+        localStorage.setItem('showCancelledTrips', String(showCancelled));
+        loadData(showCancelled);
+    }, [showCancelled]);
 
     const handleUpdate = async (id: string, data: any) => {
         setTrips(prev => prev.map(t => t.id === id ? {...t, ...data} : t));
         try {
             await tripsApi.update(id, data);
+            
+            if (data.status && data.status === "CANCELLED" && !showCancelled) {
+                await loadData(showCancelled);
+            }
         } catch (e) {
-            loadData();
+            await loadData(showCancelled);
         }
     };
 
@@ -109,10 +121,10 @@ export const TripsJournal: React.FC = () => {
         if (!assignModal.tripId) return;
         try {
             await tripsApi.assignVehicle(assignModal.tripId, vehicleId, split);
-            await loadData();
+            await loadData(showCancelled);
         } catch (e: any) {
             alert(`Ошибка: ${e.response?.data?.detail || "Не удалось назначить машину"}`);
-            await loadData();
+            await loadData(showCancelled);
         } finally {
             setAssignModal({open: false, tripId: null, currentVehicle: null});
         }
@@ -174,9 +186,9 @@ export const TripsJournal: React.FC = () => {
         return (
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, borderRadius: "18px",
-                border: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.CARD_BG
+                border: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.CARD_BG,
+                opacity: trip.status === 'CANCELLED' ? 0.6 : 1
             }}>
-
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                     <Stack direction="row" alignItems="center" spacing={1}>
                         <AccessTimeIcon sx={{fontSize: 20, color: COLORS.ACCENT_YELLOW}}/>
@@ -305,11 +317,13 @@ export const TripsJournal: React.FC = () => {
                             tripId: trip.id,
                             currentVehicle: vehicleObj || null
                         })}
+                        disabled={trip.status === 'CANCELLED'}
                     >
                         {vehicleDisplay}
                     </Button>
                     <Button fullWidth size="small"
-                            startIcon={<PersonIcon/>} {...getAssignButtonProps(false)}>Водитель</Button>
+                            startIcon={<PersonIcon/>} {...getAssignButtonProps(false)}
+                            disabled={trip.status === 'CANCELLED'}>Водитель</Button>
                     <IconButton size="small" sx={{bgcolor: COLORS.PAGE_BG, borderRadius: "10px"}}
                                 onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
                         <OpenInNewIcon sx={{fontSize: 18}}/>
@@ -324,10 +338,33 @@ export const TripsJournal: React.FC = () => {
 
     return (
         <Box sx={{p: isMobile ? 2 : 4, bgcolor: COLORS.PAGE_BG, minHeight: "100vh"}}>
-            <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900" mb={isMobile ? 2 : 4}
-                        sx={{letterSpacing: "-0.04em", color: "#1D1D1F"}}>
-                Журнал рейсов
-            </Typography>
+            <Stack direction={{xs: "column", sm: "row"}} justifyContent="space-between" alignItems="center"
+                   mb={isMobile ? 2 : 4}>
+                <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900"
+                            sx={{letterSpacing: "-0.04em", color: "#1D1D1F", mb: {xs: 2, sm: 0}}}>
+                    Журнал рейсов
+                </Typography>
+
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={showCancelled}
+                            onChange={(e) => setShowCancelled(e.target.checked)}
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': {color: COLORS.ACCENT_YELLOW},
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {backgroundColor: COLORS.ACCENT_YELLOW}
+                            }}
+                        />
+                    }
+                    label={<Typography variant="body2" fontWeight="bold">Показывать отмененные</Typography>}
+                />
+            </Stack>
+
+            {Object.keys(groupedTrips).length === 0 && !loading && (
+                <Typography color="text.secondary" textAlign="center" mt={5}>
+                    Нет рейсов
+                </Typography>
+            )}
 
             {Object.entries(groupedTrips).sort((a, b) => dayjs(b[0]).diff(dayjs(a[0]))).map(([date, dayTrips]) => (
                 <Accordion key={date} defaultExpanded elevation={0}
@@ -407,13 +444,15 @@ export const TripsJournal: React.FC = () => {
                                             return (
                                                 <TableRow key={trip.id} sx={{
                                                     bgcolor: rowBg,
+                                                    opacity: trip.status === 'CANCELLED' ? 0.5 : 1,
                                                     "&:hover": {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05)}
                                                 }}>
                                                     <TableCell sx={cellSx}>
                                                         <Stack direction="row" spacing={0.5} alignItems="center">
                                                             <AccessTimeIcon
                                                                 sx={{fontSize: 14, color: COLORS.ACCENT_YELLOW}}/>
-                                                            <Typography variant="body2" fontWeight="900">
+                                                            <Typography variant="body2" fontWeight="900"
+                                                                        sx={{textDecoration: trip.status === 'CANCELLED' ? 'line-through' : 'none'}}>
                                                                 {trip.departure_time.slice(0, 5)}
                                                             </Typography>
                                                         </Stack>
@@ -479,12 +518,14 @@ export const TripsJournal: React.FC = () => {
                                                                     tripId: trip.id,
                                                                     currentVehicle: vehicleObj || null
                                                                 })}
+                                                                disabled={trip.status === 'CANCELLED'}
                                                         >
                                                             {vehicleDisplay}
                                                         </Button>
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
-                                                        <Button fullWidth {...getAssignButtonProps(false)}>Выбрать
+                                                        <Button fullWidth {...getAssignButtonProps(false)}
+                                                                disabled={trip.status === 'CANCELLED'}>Выбрать
                                                             вод.</Button>
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
