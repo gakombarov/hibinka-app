@@ -23,3 +23,6 @@ aiosmtplib==3.0.1
 # Утилиты
 python-dotenv==1.0.0
 email-validator==2.1.0
+ruff
+apscheduler==3.10.4
+redis==5.0.1

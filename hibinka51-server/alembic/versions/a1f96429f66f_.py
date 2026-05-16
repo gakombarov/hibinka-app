@@ -1,8 +1,8 @@
-"""initial_schema
+"""
 
-Revision ID: c2c219b196b1
+Revision ID: a1f96429f66f
 Revises: 
-Create Date: 2026-04-26 08:41:58.091859
+Create Date: 2026-05-07 09:30:26.649198
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c2c219b196b1'
+revision: str = 'a1f96429f66f'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -58,7 +58,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_phone'), 'users', ['phone'], unique=True)
     op.create_table('vehicles',
-    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('alias', sa.String(length=50), nullable=False),
     sa.Column('brand', sa.String(length=50), nullable=False),
     sa.Column('model', sa.String(length=50), nullable=False),
@@ -118,6 +118,7 @@ def upgrade() -> None:
     sa.Column('scheduled_trip_id', sa.UUID(), nullable=True),
     sa.Column('customer_id', sa.UUID(), nullable=True),
     sa.Column('booking_id', sa.UUID(), nullable=True, comment='Заявка, к которой привязана поездка'),
+    sa.Column('vehicle_id', sa.UUID(), nullable=True),
     sa.Column('trip_date', sa.Date(), nullable=False, comment='Дата поездки'),
     sa.Column('departure_time', sa.Time(), nullable=False, comment='Время старта'),
     sa.Column('departure_location', sa.String(length=255), nullable=False),
@@ -139,6 +140,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['customer_id'], ['users.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['scheduled_trip_id'], ['scheduled_trips.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['vehicle_id'], ['vehicles.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_trips_id'), 'trips', ['id'], unique=False)

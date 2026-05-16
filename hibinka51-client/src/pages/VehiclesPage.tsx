@@ -1,222 +1,252 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Box, Typography, CircularProgress, Alert, Stack, Button,
-  MenuItem, Select, FormControl, InputLabel, TextField,
-  ToggleButtonGroup, ToggleButton,
+    Box,
+    Button,
+    CircularProgress,
+    Divider,
+    IconButton,
+    Paper,
+    Stack,
+    Switch,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Typography,
+    useMediaQuery,
+    useTheme,
+    Chip,
+    alpha
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store/store";
+import { fetchVehicles, updateVehicle, deleteVehicle } from "../store/vehiclesSlice";
+import { Vehicle } from "../shared/types/api";
+
 import { CreateVehicleModal } from "../features/vehicles/CreateVehicleModal";
-import { ConfirmDialog } from "../shared/components/ui/ConfirmDialog";
-import { deleteVehicle as apiDeleteVehicle } from "../api/vehicles";
-import { getAllVehiclesList, setFilters, incrementSkip, SortKey, SortDir } from "../store/vehiclesSlice";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Paper from "@mui/material/Paper";
-import { Vehicle } from "@shared/types/api";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import Checkbox from "@mui/material/Checkbox";
 
-const COLUMNS: [SortKey, string][] = [
-  ["alias", "Псевдоним"], ["brand", "Марка"], ["model", "Модель"],
-  ["license_plate", "Госномер"], ["capacity", "Вместимость"],
-  ["category", "Категория"], ["is_active", "Активный"],
-];
+const COLORS = {
+    PAGE_BG: "#F2F2F7",
+    ACCENT_YELLOW: "#FFD60A",
+    CARD_BG: "#FFFFFF",
+    BORDER: "rgba(0,0,0,0.05)",
+    TEXT_MAIN: "#1D1D1F",
+    TEXT_SECONDARY: "#86868B"
+};
 
-export const VehiclesPage = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+const CATEGORY_LABELS: Record<string, string> = {
+    "CAR": "Легковая",
+    "MINIBUS": "Микроавтобус",
+    "BUS": "Автобус"
+};
 
-  const { list: vehicles, skip, limit, loading, error, hasMore,
-    sortKey, sortDir, filterCategory, filterCapacity, filterActive,
-  } = useSelector((state: RootState) => state.vehicles);
+export const VehiclesPage: React.FC = () => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const dispatch = useDispatch<AppDispatch>();
 
-  const containerRef = useRef<HTMLDivElement>(null);
+    const { items: vehicles, loading } = useSelector((state: RootState) => state.vehicles);
 
-  const fetchParams = { skip, limit, sortKey, sortDir, filterCategory, filterCapacity, filterActive };
+    const [isModalOpen, setModalOpen] = useState(false);
+    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
-  // Initial load + re-fetch when filters/sort change (skip resets to 0 in setFilters)
-  useEffect(() => {
-    dispatch(getAllVehiclesList({ skip: 0, limit, sortKey, sortDir, filterCategory, filterCapacity, filterActive }));
-  }, [sortKey, sortDir, filterCategory, filterCapacity, filterActive]);
+    useEffect(() => {
+        dispatch(fetchVehicles());
+    }, [dispatch]);
 
-  // Load next page when skip increments
-  useEffect(() => {
-    if (skip === 0) return;
-    dispatch(getAllVehiclesList(fetchParams));
-  }, [skip]);
+    const handleToggleActive = async (vehicle: Vehicle) => {
+        try {
+            await dispatch(updateVehicle({ id: vehicle.id, data: { is_active: !vehicle.is_active } })).unwrap();
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
-  const handleScroll = () => {
-    const el = containerRef.current;
-    if (!el || loading || !hasMore) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
-      dispatch(incrementSkip());
-    }
-  };
+    const handleDelete = async (id: string) => {
+        if (window.confirm("Удалить это транспортное средство?")) {
+            try {
+                await dispatch(deleteVehicle(id)).unwrap();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
 
-  const handleSort = (key: SortKey) => {
-    dispatch(setFilters({
-      sortKey: key,
-      sortDir: sortKey === key && sortDir === "asc" ? "desc" : "asc",
-    }));
-  };
+    const openEditModal = (vehicle: Vehicle) => {
+        setEditingVehicle(vehicle);
+        setModalOpen(true);
+    };
 
-  const handleDeleteConfirmed = async () => {
-    if (!confirmDeleteId) return;
-    try {
-      await apiDeleteVehicle(confirmDeleteId);
-      dispatch(setFilters({})); // reset + refetch
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setConfirmDeleteId(null);
-    }
-  };
+    const handleModalClose = () => {
+        setEditingVehicle(null);
+        setModalOpen(false);
+        dispatch(fetchVehicles());
+    };
 
-  const deleteSelected = async () => {
-    try {
-      await Promise.all(selected.map(id => apiDeleteVehicle(id)));
-      dispatch(setFilters({}));
-      dispatch(getAllVehiclesList(fetchParams));
-      setSelected([]);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    const MobileVehicleCard = ({ vehicle }: { vehicle: Vehicle }) => (
+        <Paper elevation={0} sx={{
+            p: 2, mb: 2, borderRadius: "18px",
+            border: `1px solid ${COLORS.BORDER}`,
+            bgcolor: COLORS.CARD_BG
+        }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <DirectionsCarIcon sx={{ color: vehicle.is_active ? COLORS.ACCENT_YELLOW : COLORS.TEXT_SECONDARY }} />
+                    <Typography fontWeight="900" fontSize="1.1rem" color={COLORS.TEXT_MAIN}>
+                        {vehicle.alias || `${vehicle.brand} ${vehicle.model}`}
+                    </Typography>
+                </Stack>
+                <Switch
+                    checked={vehicle.is_active}
+                    onChange={() => handleToggleActive(vehicle)}
+                    color="warning"
+                />
+            </Stack>
 
-  const onSelectAllClick = (event: any) => {
-    setSelected(event.target.checked ? vehicles.map(v => v.id) : []);
-  };
+            <Divider sx={{ my: 1.5, opacity: 0.5 }} />
 
-  const handleClick = (id: string) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                    <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: 700, display: 'block' }}>ГОС. НОМЕР</Typography>
+                    <Chip
+                        label={vehicle.license_plate}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 800, borderRadius: "6px", mt: 0.5, borderStyle: 'dashed' }}
+                    />
+                </Box>
+                <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: 700, display: 'block' }}>МЕСТ</Typography>
+                    <Typography fontWeight="900" fontSize="1.1rem" color={COLORS.TEXT_MAIN}>
+                        {vehicle.capacity}
+                    </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                    <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: 700, display: 'block' }}>КАТЕГОРИЯ</Typography>
+                    <Typography fontWeight="800" fontSize="0.85rem" color={COLORS.TEXT_MAIN} sx={{ mt: 0.5 }}>
+                        {CATEGORY_LABELS[vehicle.category] || vehicle.category}
+                    </Typography>
+                </Box>
+            </Stack>
+
+            <Stack direction="row" spacing={1} mt={2}>
+                <Button
+                    fullWidth size="small" variant="outlined" startIcon={<EditIcon />}
+                    onClick={() => openEditModal(vehicle)}
+                    sx={{ borderRadius: "10px", fontWeight: 800, color: COLORS.TEXT_MAIN, borderColor: COLORS.BORDER }}
+                >
+                    Изменить
+                </Button>
+                <IconButton
+                    size="small"
+                    onClick={() => handleDelete(vehicle.id)}
+                    sx={{ bgcolor: alpha('#FF3B30', 0.1), color: '#FF3B30', borderRadius: "10px" }}
+                >
+                    <DeleteIcon fontSize="small" />
+                </IconButton>
+            </Stack>
+        </Paper>
     );
-  };
 
-  if (error) return <Alert severity="error" sx={{ mt: 2, mx: "auto", maxWidth: 1000 }}>{error}</Alert>;
+    const cellSx = {
+        padding: "16px",
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+    };
 
-  return (
-    <Box sx={{ p: 3, maxWidth: 1000, mx: "auto" }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" fontWeight="bold">Автопарк</Typography>
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" onClick={() => setIsCreateModalOpen(true)} sx={{ borderRadius: "8px" }}>
-            + Создать Транспортное средство
-          </Button>
-          {selected.length > 0 && (
-            <Button variant="contained" onClick={deleteSelected}
-              sx={{ borderRadius: "8px", minWidth: "unset", px: 1, py: 1 }} title="Удалить выбранные">
-              <DeleteIcon />
-            </Button>
-          )}
-        </Stack>
-      </Stack>
+    if (loading && vehicles.length === 0) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
-      <Stack direction="row" spacing={2} mb={2} flexWrap="wrap">
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Категория</InputLabel>
-          <Select value={filterCategory} label="Категория"
-            onChange={e => dispatch(setFilters({ filterCategory: e.target.value }))}>
-            <MenuItem value="">Все</MenuItem>
-            <MenuItem value="BUS">BUS</MenuItem>
-            <MenuItem value="MINIBUS">MINIBUS</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField size="small" label="Вместимость от" type="number" value={filterCapacity}
-          onChange={e => dispatch(setFilters({ filterCapacity: e.target.value }))}
-          sx={{ width: 140 }} />
-        <ToggleButtonGroup size="small" exclusive value={filterActive}
-          onChange={(_, v) => dispatch(setFilters({ filterActive: v ?? "" }))}>
-          <ToggleButton value="">Все</ToggleButton>
-          <ToggleButton value="true">Активные</ToggleButton>
-          <ToggleButton value="false">Неактивные</ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
+    return (
+        <Box sx={{ p: isMobile ? 2 : 4, bgcolor: COLORS.PAGE_BG, minHeight: "100vh" }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={isMobile ? 2 : 4}>
+                <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900" sx={{ letterSpacing: "-0.04em", color: "#1D1D1F" }}>
+                    Автопарк
+                </Typography>
+                <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => { setEditingVehicle(null); setModalOpen(true); }}
+                    sx={{
+                        bgcolor: COLORS.ACCENT_YELLOW,
+                        color: 'black',
+                        fontWeight: 800,
+                        borderRadius: "12px",
+                        boxShadow: 'none',
+                        '&:hover': { bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.8), boxShadow: 'none' }
+                    }}
+                >
+                    {isMobile ? "Добавить" : "Добавить транспорт"}
+                </Button>
+            </Stack>
 
-      {vehicles.length === 0 && !loading ? (
-        <Alert severity="info">Нет транспортных средств</Alert>
-      ) : (
-        <TableContainer ref={containerRef} component={Paper} sx={{ maxHeight: 500, overflow: "auto" }} onScroll={handleScroll}>
-          <Table sx={{ minWidth: 650 }} stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox color="primary"
-                    indeterminate={selected.length > 0 && selected.length < vehicles.length}
-                    checked={vehicles.length > 0 && selected.length === vehicles.length}
-                    onChange={onSelectAllClick} />
-                </TableCell>
-                {COLUMNS.map(([key, label]) => (
-                  <TableCell key={key} align={key === "alias" ? "left" : "right"}>
-                    <TableSortLabel active={sortKey === key} direction={sortKey === key ? sortDir : "asc"}
-                      onClick={() => handleSort(key)}>
-                      {label}
-                    </TableSortLabel>
-                  </TableCell>
-                ))}
-                <TableCell align="right">Действия</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {vehicles.map((vehicle: Vehicle, index) => (
-                <TableRow key={vehicle.license_plate} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                  <TableCell padding="checkbox">
-                    <Checkbox color="primary" checked={selected.includes(vehicle.id)}
-                      onClick={() => handleClick(vehicle.id)}
-                      slotProps={{ input: { "aria-labelledby": `row-${index}` } }} />
-                  </TableCell>
-                  <TableCell component="th" scope="row">{vehicle.alias}</TableCell>
-                  <TableCell align="right">{vehicle.brand}</TableCell>
-                  <TableCell align="right">{vehicle.model}</TableCell>
-                  <TableCell align="right">{vehicle.license_plate}</TableCell>
-                  <TableCell align="right">{vehicle.capacity}</TableCell>
-                  <TableCell align="right">{vehicle.category}</TableCell>
-                  <TableCell align="right">{vehicle.is_active ? "Да" : "Нет"}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                      <Button variant="contained" size="small"
-                        onClick={() => { setCurrentVehicle(vehicle); setIsEditModalOpen(true); }}
-                        sx={{ minWidth: "unset", px: 1, py: 1 }} title="Редактировать">
-                        <EditIcon />
-                      </Button>
-                      <Button variant="contained" size="small"
-                        onClick={() => setConfirmDeleteId(vehicle.id)}
-                        sx={{ minWidth: "unset", px: 1, py: 1 }} title="Удалить">
-                        <DeleteIcon />
-                      </Button>
-                    </Stack>
-                    {isEditModalOpen && vehicle.id === currentVehicle?.id && (
-                      <CreateVehicleModal vehicle={currentVehicle} open={isEditModalOpen}
-                        onClose={() => { setIsEditModalOpen(false); setCurrentVehicle(null); }}
-                        onSuccess={() => {dispatch(setFilters({})); dispatch(getAllVehiclesList(fetchParams));}} />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {loading && <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}><CircularProgress size={24} /></Box>}
-        </TableContainer>
-      )}
+            {isMobile ? (
+                <Box>
+                    {vehicles.map(v => (
+                        <MobileVehicleCard key={v.id} vehicle={v} />
+                    ))}
+                </Box>
+            ) : (
+                <TableContainer component={Paper} sx={{ borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)", border: `1px solid ${COLORS.BORDER}` }}>
+                    <Table>
+                        <TableHead sx={{ bgcolor: "#FBFBFC" }}>
+                            <TableRow sx={{ "& th": { fontWeight: 800, fontSize: "0.75rem", color: "#86868B", textTransform: 'uppercase' } }}>
+                                <TableCell>Название / Марка</TableCell>
+                                <TableCell>Гос. номер</TableCell>
+                                <TableCell align="center">Вместимость</TableCell>
+                                <TableCell>Категория</TableCell>
+                                <TableCell align="center">Статус</TableCell>
+                                <TableCell align="right">Действия</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {vehicles.map((v) => (
+                                <TableRow key={v.id} sx={{ "&:hover": { bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05) } }}>
+                                    <TableCell sx={cellSx}>
+                                        <Typography fontWeight="900" color={COLORS.TEXT_MAIN}>{v.alias || v.brand}</Typography>
+                                        <Typography variant="caption" color={COLORS.TEXT_SECONDARY} fontWeight="700">{v.model}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={cellSx}>
+                                        <Chip label={v.license_plate} size="small" variant="outlined" sx={{ fontWeight: 800, borderRadius: "6px" }} />
+                                    </TableCell>
+                                    <TableCell align="center" sx={cellSx}>
+                                        <Typography fontWeight="900">{v.capacity}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={cellSx}>
+                                        <Typography fontWeight="800" fontSize="0.85rem">
+                                            {CATEGORY_LABELS[v.category] || v.category}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell align="center" sx={cellSx}>
+                                        <Switch checked={v.is_active} onChange={() => handleToggleActive(v)} color="warning" />
+                                    </TableCell>
+                                    <TableCell align="right" sx={cellSx}>
+                                        <IconButton onClick={() => openEditModal(v)} sx={{ color: COLORS.TEXT_SECONDARY }}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton onClick={() => handleDelete(v.id)} sx={{ color: '#FF3B30' }}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
 
-      <ConfirmDialog open={confirmDeleteId !== null} title="Удалить транспортное средство?"
-        message="Это действие необратимо. Вы уверены?"
-        onConfirm={handleDeleteConfirmed} onCancel={() => setConfirmDeleteId(null)} />
-
-      <CreateVehicleModal open={isCreateModalOpen}
-        onClose={() => { setIsCreateModalOpen(false); setCurrentVehicle(null); }}
-        onSuccess={() => {dispatch(setFilters({})); dispatch(getAllVehiclesList(fetchParams));}} />
-    </Box>
-  );
+            {isModalOpen && (
+                <CreateVehicleModal
+                    open={isModalOpen}
+                    onClose={handleModalClose}
+                    vehicleToEdit={editingVehicle}
+                />
+            )}
+        </Box>
+    );
 };

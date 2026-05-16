@@ -1,18 +1,19 @@
-from sqlalchemy import Column, Integer, String, Boolean, Enum
-from sqlalchemy.orm import declarative_base
 import enum
+import uuid
+from sqlalchemy import Column, String, Integer, Boolean, Enum, text
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import IsDeletedModel
 
-Base = declarative_base()
-
 class VehicleCategory(str, enum.Enum):
-    BUS = "BUS"
+    CAR = "CAR"
     MINIBUS = "MINIBUS"
+    BUS = "BUS"
 
 class Vehicle(IsDeletedModel):
     __tablename__ = "vehicles"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     alias = Column(String(50), nullable=False)
     brand = Column(String(50), nullable=False)
     model = Column(String(50), nullable=False)
@@ -20,5 +21,6 @@ class Vehicle(IsDeletedModel):
     capacity = Column(Integer, nullable=False)
     category = Column(Enum(VehicleCategory), nullable=False)
     is_active = Column(Boolean, default=True)
-    # year = Column(Integer, nullable=False)
-    is_deleted = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text('false'))
+
+    trips = relationship("Trip", back_populates="vehicle")

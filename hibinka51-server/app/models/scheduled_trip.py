@@ -1,49 +1,64 @@
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, Text, Time
+import uuid
+
+from app.core.database import Base
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String, Time
+from sqlalchemy.dialects.postgresql import UUID  # <-- ВОТ ЭТОТ ИМПОРТ РЕШИТ ПРОБЛЕМУ
 from sqlalchemy.orm import relationship
-from app.models.base import IsDeletedModel
 
 
-class ScheduledTrip(IsDeletedModel):
-    """Модель регулярных рейсов."""
-
+class ScheduledTrip(Base):
     __tablename__ = "scheduled_trips"
 
-    route_number = Column(Integer, nullable=False, comment="Номер маршрута")
-    departure_location = Column(String, nullable=False, comment="Место отправления")
-    destination = Column(String, nullable=False, comment="Место назначения")
-    days_of_week = Column(
-        String, nullable=False, comment="Дни недели (строкой, например 'Пн, Ср, Пт')"
-    )
-    departure_time = Column(
-        Time, nullable=False, comment="Время отправления из начальной точки"
-    )
-    price = Column(Integer, nullable=False, comment="Стоимость проезда")
-    is_active = Column(Boolean, default=True, comment="Показывать ли рейс на сайте")
-    notes = Column(Text, nullable=True, comment="Заметки")
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    route_number = Column(Integer, nullable=False)
+    client_name = Column(String, nullable=True)
+    departure_location = Column(String, nullable=False)
+    destination = Column(String, nullable=False)
 
+    total_contract_value = Column(Integer, nullable=False)
+    contract_start_date = Column(Date, nullable=False)
+    contract_end_date = Column(Date, nullable=False)
+
+    price = Column(Integer, default=0)
+
+    is_active = Column(Boolean, default=True)
+    show_on_landing = Column(Boolean, default=False)
+    notes = Column(String, nullable=True)
+
+    cycles = relationship(
+        "ScheduledTripCycle", back_populates="schedule", cascade="all, delete-orphan"
+    )
     stops = relationship(
-        "ScheduledTripStop",
-        back_populates="trip",
-        cascade="all, delete-orphan",
-        order_by="ScheduledTripStop.stop_order",
+        "ScheduledTripStop", back_populates="schedule", cascade="all, delete-orphan"
     )
 
 
-class ScheduledTripStop(IsDeletedModel):
-    """
-    Модель остановки на регулярном рейсе.
-    """
+class ScheduledTripCycle(Base):
+    __tablename__ = "scheduled_trip_cycles"
 
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    schedule_id = Column(
+        UUID(as_uuid=True), ForeignKey("scheduled_trips.id", ondelete="CASCADE")
+    )
+
+    days_of_week = Column(String, nullable=False)
+    departure_time = Column(Time, nullable=False)
+    return_time = Column(Time, nullable=False)
+
+    schedule = relationship("ScheduledTrip", back_populates="cycles")
+
+
+class ScheduledTripStop(Base):
     __tablename__ = "scheduled_trip_stops"
 
-    trip_id = Column(
-        ForeignKey("scheduled_trips.id", ondelete="CASCADE"), nullable=False
-    )
-    stop_order = Column(Integer, nullable=False, comment="Порядковый номер остановки")
-    location = Column(String, nullable=False, comment="Название остановки")
-    stop_time = Column(Time, nullable=True, comment="Время прибытия на остановку")
-    description = Column(
-        String, nullable=True, comment="Описание (например 'У магазина')"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    schedule_id = Column(
+        UUID(as_uuid=True), ForeignKey("scheduled_trips.id", ondelete="CASCADE")
     )
 
-    trip = relationship("ScheduledTrip", back_populates="stops")
+    location = Column(String, nullable=False)
+    stop_time = Column(Time, nullable=True)
+    stop_order = Column(Integer, default=0)
+    description = Column(String, nullable=True)
+
+    schedule = relationship("ScheduledTrip", back_populates="stops")

@@ -1,8 +1,36 @@
+import logging
+from contextlib import asynccontextmanager
+
+from app.api.v1.api import api_router
+from app.core.config import settings
+from app.services.scheduler_tasks import run_trip_generation_task
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import settings
-from app.api.v1.api import api_router
+logger = logging.getLogger(__name__)
+
+
+scheduler = AsyncIOScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Запуск планировщика задач...")
+    scheduler.add_job(
+        run_trip_generation_task,
+        trigger=CronTrigger(hour=0, minute=5),
+        id="daily_trip_generation",
+        replace_existing=True,
+    )
+    scheduler.start()
+
+    yield
+
+    logger.info("Остановка планировщика задач...")
+    scheduler.shutdown()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -11,8 +39,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,7 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

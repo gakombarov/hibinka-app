@@ -36,3 +36,11 @@ logs:
 
 stop:
 	docker compose -f $(COMPOSE) down
+
+deep-clean:
+	docker compose -f docker-compose.local.yml down -v --remove-orphans
+	docker system prune -f
+	sudo fuser -k 8000/tcp || true
+	sudo fuser -k 5173/tcp || true
+	sudo fuser -k 5445/tcp || true
+	docker compose -f docker-compose.local.yml up --build -d

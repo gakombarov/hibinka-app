@@ -1,11 +1,12 @@
-from datetime import date, time, datetime
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict, computed_field
-from app.models.trip import TripStatus, PaymentStatus
-from app.models.vehicle import VehicleCategory
-import enum
+from pydantic import BaseModel, ConfigDict
+from enum import Enum
 
+class VehicleCategory(str, Enum):
+    CAR = "CAR"
+    MINIBUS = "MINIBUS"
+    BUS = "BUS"
 
 class VehicleBase(BaseModel):
     alias: str
@@ -16,39 +17,8 @@ class VehicleBase(BaseModel):
     category: VehicleCategory
     is_active: bool = True
 
-class TripCustomerInfo(BaseModel):
-    first_name: Optional[str] = "Не указано"
-    phone: Optional[str] = "Не указано"
-    model_config = ConfigDict(from_attributes=True)
-
-
-class TripBookingInfo(BaseModel):
-    total_amount: Optional[float] = 0
-    paid_amount: Optional[float] = 0
-    customer: Optional[TripCustomerInfo] = None
-    model_config = ConfigDict(from_attributes=True)
-
-
-class TripStopBase(BaseModel):
-    location: str
-    stop_order: int
-
 class VehicleCreate(VehicleBase):
-    customer_id: Optional[UUID] = None
-    vehicle_id: Optional[UUID] = None
-    driver_id: Optional[UUID] = None
-    scheduled_trip_id: Optional[UUID] = None
-    booking_id: Optional[UUID] = None
-    stops: List[TripStopBase] = []
-
-
-class TripDriverUpdate(BaseModel):
-    status: TripStatus
-
-
-class VehicleResponse(VehicleBase):
-    id: int
-
+    pass
 
 class VehicleUpdate(BaseModel):
     alias: Optional[str] = None
@@ -58,3 +28,8 @@ class VehicleUpdate(BaseModel):
     capacity: Optional[int] = None
     category: Optional[VehicleCategory] = None
     is_active: Optional[bool] = None
+
+class VehicleResponse(VehicleBase):
+    id: UUID
+    is_deleted: bool
+    model_config = ConfigDict(from_attributes=True)

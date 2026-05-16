@@ -1,4 +1,4 @@
-import { VehicleCategory } from "src/features/vehicles/CreateVehicleModal";
+export type VehicleCategory = "CAR" | "MINIBUS" | "BUS";
 
 export type TripStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID";
@@ -36,24 +36,21 @@ export interface Trip {
     passenger_count: number;
     is_regular: boolean;
     status: TripStatus;
-
     total_amount: number;
     paid_amount: number;
     payment_status: PaymentStatus;
-
     show_on_landing: boolean;
     has_trailer: boolean;
     notes: string | null;
     stops: TripStop[];
     display_status: string;
-
     booking_id: string | null;
     vehicle_id: string | null;
     driver_id: string | null;
     scheduled_trip_id: string | null;
-
     customer?: TripCustomerInfo | null;
     booking?: TripBookingInfo | null;
+    vehicle?: Vehicle | null;
 }
 
 export type TripResponse = Trip;
@@ -124,17 +121,75 @@ export interface BookingConfirm {
     notes?: string;
 }
 
+
 export interface Vehicle {
-  id: string;
-  alias: string;
-  brand: string;
-  model: string;
-  license_plate: string;
-  capacity: number;
-  category: VehicleCategory;
-  is_active: boolean;
+    id: string;
+    alias: string;
+    brand: string;
+    model: string;
+    license_plate: string;
+    capacity: number;
+    category: VehicleCategory;
+    is_active: boolean;
 }
 
+export interface ScheduledTripStopCreate {
+    stop_order: number;
+    location: string;
+    stop_time?: string | null;
+    description?: string | null;
+}
+
+export interface ScheduledTripStopResponse extends ScheduledTripStopCreate {
+    id: string;
+    schedule_id: string;
+}
+
+export interface ScheduledTripCycleCreate {
+    days_of_week: string;
+    departure_time: string;
+    return_time: string;
+}
+
+export interface ScheduledTripCycleResponse extends ScheduledTripCycleCreate {
+    id: string;
+    schedule_id: string;
+}
+
+export interface ScheduledTripCreate {
+    route_number: number;
+    client_name?: string | null;
+    departure_location: string;
+    destination: string;
+
+    total_contract_value: number;
+    contract_start_date: string;
+    contract_end_date: string;
+
+    is_active: boolean;
+    show_on_landing: boolean;
+    notes?: string | null;
+
+    cycles: ScheduledTripCycleCreate[];
+    stops: ScheduledTripStopCreate[];
+}
+
+export interface ScheduledTripResponse extends Omit<ScheduledTripCreate, 'cycles' | 'stops'> {
+    id: string;
+    price: number;
+    cycles: ScheduledTripCycleResponse[];
+    stops: ScheduledTripStopResponse[];
+}
+
+export const createScheduledTrip = async (data: ScheduledTripCreate): Promise<ScheduledTripResponse> => {
+    const response = await api.post('/scheduled_trips/', data);
+    return response.data;
+};
+
+export const triggerTripsSync = async (): Promise<{ status: string; message: string }> => {
+    const response = await api.post('/scheduled_trips/sync');
+    return response.data;
+};
 export interface Organization {
   id: string;
   name: string;
