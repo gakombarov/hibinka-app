@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking
+from app.models.driver import DriverProfile
 from app.models.trip import PaymentStatus, Trip, TripStatus
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -88,9 +89,9 @@ async def update_trip(
         ):
             update_data["paid_amount"] = 0
 
-    for field, value in update_data.items():
-        if field != "stops":
-            setattr(trip, field, value)
+        for field, value in update_data.items():
+            if field != "stops":
+                setattr(trip, field, value)
 
     db.add(trip)
     await db.flush()
@@ -184,6 +185,48 @@ async def assign_vehicle(
         trip.passenger_count = vehicle.capacity
 
     trip.vehicle_id = vehicle.id
+    await db.commit()
+
+    final_query = (
+        select(Trip)
+        .options(
+            selectinload(Trip.stops),
+            joinedload(Trip.booking),
+            joinedload(Trip.customer),
+        )
+        .where(Trip.id == trip.id)
+    )
+    final_res = await db.execute(final_query)
+    return final_res.scalars().first()
+
+
+@router.patch("/{trip_id}/assign-driver", response_model=TripResponse)
+async def assign_driver(
+    trip_id: UUID,
+    driver_id: Optional[UUID] = Body(None, embed=True),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+):
+    trip_stmt = select(Trip).where(Trip.id == trip_id, Trip.is_deleted == False)
+    trip_result = await db.execute(trip_stmt)
+    trip = trip_result.scalars().first()
+
+    if not trip:
+        raise HTTPException(status_code=404, detail="Поездка не найдена")
+
+    if driver_id:
+        driver_result = await db.execute(
+            select(DriverProfile).where(
+                DriverProfile.id == driver_id, DriverProfile.is_deleted == False
+            )
+        )
+        driver = driver_result.scalars().first()
+        if not driver:
+            raise HTTPException(status_code=404, detail="Водитель не найден")
+        trip.driver_id = driver.id
+    else:
+        trip.driver_id = None
+
     await db.commit()
 
     final_query = (

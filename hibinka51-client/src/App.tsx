@@ -20,6 +20,8 @@ import {VehiclesPage} from "./pages/VehiclesPage";
 
 import {ScheduleAdminPage} from "./pages/ScheduleAdminPage";
 import {ScheduledTripFormPage} from "./pages/ScheduledTripFormPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { DriversPage } from "./pages/DriversPage";
 
 import type {RootState} from "./store/store";
 import {logout} from "./store/authSlice";
@@ -112,15 +114,10 @@ const AppContent = () => {
                             <Route path="schedule/new" element={<ScheduledTripFormPage/>}/>
                             <Route path="schedule/:id" element={<ScheduledTripFormPage/>}/>
 
-                            {/* Заглушки для будущих страниц */}
-                            <Route
-                                path="customers"
-                                element={
-                                    <Box sx={{p: 4}}>
-                                        <h1>Клиенты (в разработке)</h1>
-                                    </Box>
-                                }
-                            />
+
+                            <Route path="customers" element={<CustomersPage />} />
+                            <Route path="drivers" element={<DriversPage />} />
+
                         </Route>
                     </Routes>
                 </Box>

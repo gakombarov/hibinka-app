@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, bookings, users, scheduled_trips, trips, vehicles
+from app.api.v1.endpoints import auth, bookings, users, scheduled_trips, trips, vehicles, customers, drivers
 
 api_router = APIRouter()
 
@@ -11,6 +11,8 @@ api_router.include_router(
 )
 api_router.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_router.include_router(vehicles.router, prefix="/vehicles", tags=["vehicles"])
+api_router.include_router(customers.router, prefix="/customers", tags=["customers"])
+api_router.include_router(drivers.router, prefix="/drivers", tags=["drivers"])
 
 
 @api_router.get("/")

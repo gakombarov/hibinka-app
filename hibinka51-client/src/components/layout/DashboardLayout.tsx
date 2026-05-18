@@ -57,6 +57,11 @@ export const DashboardLayout = () => {
       icon: <PeopleIcon />,
     },
     {
+      text: "Водители",
+      path: "/dashboard/drivers",
+      icon: <PeopleIcon />,
+    },
+    {
       text: "Автопарк",
       path: "/dashboard/vehicles",
       icon: <DirectionsCarIcon />,

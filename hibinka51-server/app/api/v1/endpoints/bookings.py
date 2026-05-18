@@ -4,6 +4,7 @@ from uuid import UUID
 from app.api import deps
 from app.core.database import get_db
 from app.models.booking import Booking, BookingSource, BookingStatus
+from app.models.customer import Contact
 from app.models.trip import PaymentStatus, Trip, TripStatus
 from app.models.user import User, UserRole
 from app.schemas.booking import (
@@ -109,7 +110,6 @@ async def create_public_booking(
     booking_in: BookingCreatePublic,
     db: AsyncSession = Depends(get_db),
 ):
-    """Эндпоинт для Лендинга: здесь телефон обязателен"""
     conditions = [User.phone == booking_in.customer_phone]
     if booking_in.customer_email:
         conditions.append(User.email == booking_in.customer_email)
@@ -136,6 +136,25 @@ async def create_public_booking(
         if booking_in.customer_email and "@hibinka.local" in user.email:
             user.email = booking_in.customer_email
         db.add(user)
+        await db.flush()
+
+    contact_query = select(Contact).where(Contact.phone == booking_in.customer_phone)
+    contact_res = await db.execute(contact_query)
+    contact = contact_res.scalars().first()
+
+    if not contact:
+        new_contact = Contact(
+            user_id=user.id,
+            full_name=booking_in.customer_name,
+            phone=booking_in.customer_phone,
+        )
+        db.add(new_contact)
+    elif not contact.user_id:
+        contact.user_id = user.id
+        contact.full_name = booking_in.customer_name
+        db.add(contact)
+
+    await db.flush()
 
     input_data = booking_in.model_dump()
 
@@ -256,7 +275,6 @@ async def get_booking(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin_user),
 ):
-    """Получить детали одной конкретной заявки"""
     query = (
         select(Booking)
         .options(
@@ -283,7 +301,6 @@ async def create_booking(
     booking_in: BookingCreateAdmin,
     db: AsyncSession = Depends(get_db),
 ):
-    """Эндпоинт для Диспетчера: телефон НЕОБЯЗАТЕЛЕН"""
     user = None
 
     if booking_in.customer_phone:
@@ -307,6 +324,29 @@ async def create_booking(
         )
         db.add(user)
         await db.flush()
+
+    contact = None
+    if booking_in.customer_phone:
+        contact_query = select(Contact).where(
+            Contact.phone == booking_in.customer_phone
+        )
+        contact_res = await db.execute(contact_query)
+        contact = contact_res.scalars().first()
+
+    if not contact:
+        new_contact = Contact(
+            user_id=user.id,
+            full_name=booking_in.customer_name,
+            phone=booking_in.customer_phone,
+        )
+        db.add(new_contact)
+    elif not contact.user_id:
+        contact.user_id = user.id
+        if booking_in.customer_name:
+            contact.full_name = booking_in.customer_name
+        db.add(contact)
+
+    await db.flush()
 
     input_data = booking_in.model_dump()
     source_val = input_data.get("source", BookingSource.PHONE)
