@@ -21,6 +21,13 @@ export const tripsApi = {
         return response.data;
     },
 
+    assignDriver: async (tripId: string, driverId: string | null) => {
+        const response = await apiClient.patch(`/trips/${tripId}/assign-driver`, {
+            driver_id: driverId
+        });
+        return response.data;
+    },
+
     update: async (id: string, data: any) => {
         const response = await apiClient.patch(`/trips/${id}`, data);
         return response.data;

@@ -1,25 +1,40 @@
 from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict
-from app.models.driver import DriverStatus
+
+
+class DriverUserResponse(BaseModel):
+    id: UUID
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DriverProfileCreate(BaseModel):
-    call_sign: str
+    first_name: str
+    last_name: Optional[str] = ""
+    call_sign: Optional[str] = None
     phone: str
     is_external: bool = False
-    status: DriverStatus = DriverStatus.OFF_DUTY
-    user_id: Optional[UUID] = None
 
 
 class DriverProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     call_sign: Optional[str] = None
     phone: Optional[str] = None
     is_external: Optional[bool] = None
-    status: Optional[DriverStatus] = None
-    user_id: Optional[UUID] = None
 
 
-class DriverProfileResponse(DriverProfileCreate):
+class DriverProfileResponse(BaseModel):
     id: UUID
+    user_id: Optional[UUID] = None
+    call_sign: str
+    phone: str
+    is_external: bool
+    user: Optional[DriverUserResponse] = None
+
     model_config = ConfigDict(from_attributes=True)

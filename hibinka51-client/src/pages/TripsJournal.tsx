@@ -10,10 +10,16 @@ import {
     Checkbox,
     Chip,
     CircularProgress,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     Divider,
     FormControlLabel,
     IconButton,
     InputBase,
+    List,
+    ListItemButton,
+    ListItemText,
     MenuItem,
     Paper,
     Select,
@@ -42,6 +48,7 @@ import {tripsApi} from "../api/trips";
 import {TripResponse} from "../shared/types/api";
 import {AssignVehicleModal} from "../features/trips/AssignVehicleModal";
 import {vehiclesApi} from "../api/vehicles";
+import {driversApi} from "../api/drivers";
 
 const COLORS = {
     PAGE_BG: "#F2F2F7",
@@ -60,12 +67,74 @@ const COLS = {
     TOTAL: 95, STATUS: 150,
 };
 
+interface AssignDriverModalProps {
+    open: boolean;
+    onClose: () => void;
+    drivers: any;
+    onAssign: (driverId: string) => void;
+}
+
+const AssignDriverModal: React.FC<AssignDriverModalProps> = ({open, onClose, drivers, onAssign}) => {
+    const driversList = useMemo(() => {
+        if (!drivers) return [];
+        if (Array.isArray(drivers)) return drivers;
+        if (drivers && typeof drivers === 'object' && Array.isArray(drivers.items)) {
+            return drivers.items;
+        }
+        return [];
+    }, [drivers]);
+
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{sx: {borderRadius: "16px"}}}>
+            <DialogTitle sx={{fontWeight: 900, pb: 1}}>Назначить водителя</DialogTitle>
+            <DialogContent sx={{p: 0}}>
+                <List sx={{pt: 0, pb: 1}}>
+                    <ListItemButton
+                        onClick={() => onAssign("")}
+                        sx={{py: 1.5, borderBottom: `1px solid ${COLORS.BORDER}`}}
+                    >
+                        <ListItemText
+                            primary="Снять водителя"
+                            primaryTypographyProps={{fontWeight: 800, color: "error.main"}}
+                        />
+                    </ListItemButton>
+                    {driversList.length === 0 ? (
+                        <Box sx={{p: 3, textAlign: 'center'}}>
+                            <Typography color="text.secondary" fontWeight="bold">Водители не найдены</Typography>
+                        </Box>
+                    ) : (
+                        driversList.map((d: any) => (
+                            <ListItemButton
+                                key={d.id}
+                                onClick={() => onAssign(d.id)}
+                                sx={{
+                                    py: 1.5,
+                                    borderBottom: `1px solid ${COLORS.BORDER}`,
+                                    '&:last-child': {borderBottom: 'none'}
+                                }}
+                            >
+                                <ListItemText
+                                    primary={d.call_sign || "Без позывного"}
+                                    secondary={d.phone || ""}
+                                    primaryTypographyProps={{fontWeight: 800}}
+                                    secondaryTypographyProps={{fontWeight: 600, color: COLORS.TEXT_SECONDARY}}
+                                />
+                            </ListItemButton>
+                        ))
+                    )}
+                </List>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 export const TripsJournal: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     const [vehicles, setVehicles] = useState<any[]>([]);
+    const [drivers, setDrivers] = useState<any>([]);
     const [trips, setTrips] = useState<TripResponse[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -83,15 +152,27 @@ export const TripsJournal: React.FC = () => {
         currentVehicle: null
     });
 
+    const [assignDriverModal, setAssignDriverModal] = useState<{
+        open: boolean;
+        tripId: string | null;
+        currentDriver: any | null
+    }>({
+        open: false,
+        tripId: null,
+        currentDriver: null
+    });
+
     const loadData = async (includeCancelled: boolean) => {
         try {
             setLoading(true);
-            const [tripsData, vehiclesData] = await Promise.all([
+            const [tripsData, vehiclesData, driversData] = await Promise.all([
                 tripsApi.getAll(includeCancelled),
-                vehiclesApi.getAll()
+                vehiclesApi.getAll(),
+                driversApi.getAll().catch(() => [])
             ]);
             setTrips(tripsData);
             setVehicles(vehiclesData);
+            setDrivers(driversData);
         } catch (e) {
             console.error(e);
         } finally {
@@ -108,7 +189,6 @@ export const TripsJournal: React.FC = () => {
         setTrips(prev => prev.map(t => t.id === id ? {...t, ...data} : t));
         try {
             await tripsApi.update(id, data);
-            
             if (data.status && data.status === "CANCELLED" && !showCancelled) {
                 await loadData(showCancelled);
             }
@@ -127,6 +207,19 @@ export const TripsJournal: React.FC = () => {
             await loadData(showCancelled);
         } finally {
             setAssignModal({open: false, tripId: null, currentVehicle: null});
+        }
+    };
+
+    const handleAssignDriver = async (driverId: string) => {
+        if (!assignDriverModal.tripId) return;
+        try {
+            await tripsApi.assignDriver(assignDriverModal.tripId, driverId || null);
+            await loadData(showCancelled);
+        } catch (e: any) {
+            alert(`Ошибка: ${e.response?.data?.detail || "Не удалось назначить водителя"}`);
+            await loadData(showCancelled);
+        } finally {
+            setAssignDriverModal({open: false, tripId: null, currentDriver: null});
         }
     };
 
@@ -179,9 +272,15 @@ export const TripsJournal: React.FC = () => {
         const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
         const isContractTrip = Boolean((trip as any).scheduled_trip_id);
 
-        const vehicleObj = (trip as any).vehicle || vehicles.find(v => v.id === (trip as any).vehicle_id);
+        const vehiclesList = Array.isArray(vehicles) ? vehicles : ((vehicles as any).items || []);
+        const vehicleObj = (trip as any).vehicle || vehiclesList.find((v: any) => v.id === (trip as any).vehicle_id);
         const isVehicleAssigned = !!vehicleObj;
         const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : "Выбрать авто";
+
+        const driversList = Array.isArray(drivers) ? drivers : ((drivers as any).items || []);
+        const driverObj = (trip as any).driver || driversList.find((d: any) => d.id === (trip as any).driver_id);
+        const isDriverAssigned = !!driverObj;
+        const driverDisplay = driverObj ? (driverObj.call_sign || "Водитель") : "Водитель";
 
         return (
             <Paper elevation={0} sx={{
@@ -321,9 +420,20 @@ export const TripsJournal: React.FC = () => {
                     >
                         {vehicleDisplay}
                     </Button>
-                    <Button fullWidth size="small"
-                            startIcon={<PersonIcon/>} {...getAssignButtonProps(false)}
-                            disabled={trip.status === 'CANCELLED'}>Водитель</Button>
+                    <Button
+                        fullWidth
+                        size="small"
+                        startIcon={<PersonIcon/>}
+                        {...getAssignButtonProps(isDriverAssigned)}
+                        onClick={() => setAssignDriverModal({
+                            open: true,
+                            tripId: trip.id,
+                            currentDriver: driverObj || null
+                        })}
+                        disabled={trip.status === 'CANCELLED'}
+                    >
+                        {driverDisplay}
+                    </Button>
                     <IconButton size="small" sx={{bgcolor: COLORS.PAGE_BG, borderRadius: "10px"}}
                                 onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
                         <OpenInNewIcon sx={{fontSize: 18}}/>
@@ -437,9 +547,16 @@ export const TripsJournal: React.FC = () => {
                                             const rowBg = idx % 2 === 0 ? COLORS.PALE_YELLOW : "#FFFFFF";
                                             const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
                                             const isContractTrip = Boolean((trip as any).scheduled_trip_id);
-                                            const vehicleObj = (trip as any).vehicle || vehicles.find(v => v.id === (trip as any).vehicle_id);
+
+                                            const vehiclesList = Array.isArray(vehicles) ? vehicles : ((vehicles as any).items || []);
+                                            const vehicleObj = (trip as any).vehicle || vehiclesList.find((v: any) => v.id === (trip as any).vehicle_id);
                                             const isVehicleAssigned = !!vehicleObj;
                                             const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : 'Выбрать авто';
+
+                                            const driversList = Array.isArray(drivers) ? drivers : ((drivers as any).items || []);
+                                            const driverObj = (trip as any).driver || driversList.find((d: any) => d.id === (trip as any).driver_id);
+                                            const isDriverAssigned = !!driverObj;
+                                            const driverDisplay = driverObj ? driverObj.call_sign : 'Выбрать вод.';
 
                                             return (
                                                 <TableRow key={trip.id} sx={{
@@ -524,9 +641,18 @@ export const TripsJournal: React.FC = () => {
                                                         </Button>
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
-                                                        <Button fullWidth {...getAssignButtonProps(false)}
-                                                                disabled={trip.status === 'CANCELLED'}>Выбрать
-                                                            вод.</Button>
+                                                        <Button
+                                                            fullWidth
+                                                            {...getAssignButtonProps(isDriverAssigned)}
+                                                            onClick={() => setAssignDriverModal({
+                                                                open: true,
+                                                                tripId: trip.id,
+                                                                currentDriver: driverObj || null
+                                                            })}
+                                                            disabled={trip.status === 'CANCELLED'}
+                                                        >
+                                                            {driverDisplay}
+                                                        </Button>
                                                     </TableCell>
                                                     <TableCell sx={cellSx}>
                                                         {isContractTrip ? (
@@ -612,6 +738,13 @@ export const TripsJournal: React.FC = () => {
                 trip={trips.find(t => t.id === assignModal.tripId) || null}
                 onAssign={handleAssignVehicle}
                 isLoading={loading}
+            />
+
+            <AssignDriverModal
+                open={assignDriverModal.open}
+                onClose={() => setAssignDriverModal({open: false, tripId: null, currentDriver: null})}
+                drivers={drivers}
+                onAssign={handleAssignDriver}
             />
         </Box>
     );

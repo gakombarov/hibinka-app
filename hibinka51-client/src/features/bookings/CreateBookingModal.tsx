@@ -1,7 +1,9 @@
-import React, {forwardRef, useState} from "react";
+import React, {forwardRef, useEffect, useState} from "react";
 import {
+    Autocomplete,
     Box,
     Button,
+    CircularProgress,
     Divider,
     FormControlLabel,
     Grid,
@@ -11,13 +13,14 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import {DatePicker, LocalizationProvider, TimePicker,} from "@mui/x-date-pickers";
+import {DatePicker, LocalizationProvider, TimePicker} from "@mui/x-date-pickers";
 import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
 import {IMaskInput} from "react-imask";
 import dayjs from "dayjs";
 import "dayjs/locale/ru";
 import {Modal} from "../../shared/components/ui/Modal";
 import {createAdminBooking} from "../../api/bookings";
+import {getContacts} from "../../api/customers";
 
 const PhoneMaskCustom = forwardRef<HTMLInputElement, any>(
     function PhoneMaskCustom(props, ref) {
@@ -57,6 +60,31 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
         notes: "",
     });
 
+    const [options, setOptions] = useState<any[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [inputValue, setInputValue] = useState("");
+
+    useEffect(() => {
+        if (inputValue.length < 2) {
+            setOptions([]);
+            return;
+        }
+
+        const delayDebounceFn = setTimeout(async () => {
+            setSearchLoading(true);
+            try {
+                const results = await getContacts({search: inputValue, limit: 10});
+                setOptions(results);
+            } catch (error) {
+                console.error("Ошибка при поиске контактов:", error);
+            } finally {
+                setSearchLoading(false);
+            }
+        }, 400);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [inputValue]);
+
     const handleSubmit = async () => {
         if (!form.customer_name || form.customer_name.length < 2) {
             alert("Введите имя клиента");
@@ -65,7 +93,7 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
 
         try {
             setLoading(true);
-            
+
             const digits = form.customer_phone.replace(/\D/g, "");
             const finalForm = {
                 ...form,
@@ -88,18 +116,77 @@ export const CreateBookingModal = ({open, onClose, onSuccess}: any) => {
             <Modal open={open} onClose={onClose} title="Новая заявка (Диспетчер)">
                 <Box sx={{mt: 1, p: 1}}>
                     <Grid container spacing={2}>
+
                         <Grid item xs={6}>
-                            <TextField
-                                label="Имя клиента"
+                            <Autocomplete
+                                freeSolo
                                 fullWidth
-                                size="small"
-                                required
-                                value={form.customer_name}
-                                onChange={(e) =>
-                                    setForm({...form, customer_name: e.target.value})
+                                options={options}
+                                sx={{
+                                    width: "250%",
+                                    "& .MuiInputBase-root": {
+                                        height: "40px !important",
+                                        minHeight: "40px !important",
+                                        paddingTop: "0px !important",
+                                        paddingBottom: "0px !important",
+                                        boxSizing: "border-box"
+                                    },
+                                    "& .MuiOutlinedInput-root .MuiAutocomplete-input": {
+                                        padding: "0px 4px !important"
+                                    }
+                                }}
+                                getOptionLabel={(option: any) =>
+                                    typeof option === "string" ? option : option.full_name
                                 }
+                                renderOption={(props, option: any) => {
+                                    const {key, ...optionProps} = props;
+                                    return (
+                                        <li key={key || option.id} {...optionProps}>
+                                            {option.full_name}
+                                            <span style={{color: "gray", marginLeft: "8px", fontSize: "0.85em"}}>
+                                                {option.phone}
+                                            </span>
+                                        </li>
+                                    );
+                                }}
+                                filterOptions={(x) => x}
+                                inputValue={inputValue}
+                                onInputChange={(_, newInputValue) => {
+                                    setInputValue(newInputValue);
+                                    setForm({...form, customer_name: newInputValue});
+                                }}
+                                onChange={(_, selectedContact: any) => {
+                                    if (selectedContact && typeof selectedContact !== "string") {
+                                        setForm({
+                                            ...form,
+                                            customer_name: selectedContact.full_name,
+                                            customer_phone: selectedContact.phone || "+7 ",
+                                        });
+                                        setInputValue(selectedContact.full_name);
+                                    }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Имя клиента"
+                                        size="small"
+                                        required
+                                        fullWidth
+                                        InputProps={{
+                                            ...params.InputProps,
+                                            endAdornment: (
+                                                <React.Fragment>
+                                                    {searchLoading ?
+                                                        <CircularProgress color="inherit" size={20}/> : null}
+                                                    {params.InputProps.endAdornment}
+                                                </React.Fragment>
+                                            ),
+                                        }}
+                                    />
+                                )}
                             />
                         </Grid>
+
                         <Grid item xs={6}>
                             <TextField
                                 label="Телефон"

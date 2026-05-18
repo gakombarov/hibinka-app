@@ -53,9 +53,9 @@ class Trip(IsDeletedModel):
     booking = relationship("Booking", back_populates="trips")
     vehicle_id = Column(UUID(as_uuid=True), ForeignKey("vehicles.id"), nullable=True)
     vehicle = relationship("Vehicle", back_populates="trips")
-    # driver_id = Column(
-    #     UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    # )
+    driver_id = Column(
+        UUID(as_uuid=True), ForeignKey("driver_profiles.id"), nullable=True
+    )
 
     trip_date = Column(Date, nullable=False, comment="Дата поездки")
     departure_time = Column(Time, nullable=False, comment="Время старта")
