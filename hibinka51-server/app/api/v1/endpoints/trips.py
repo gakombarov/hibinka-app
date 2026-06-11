@@ -1,3 +1,4 @@
+from datetime import date
 from typing import List, Optional
 from uuid import UUID
 
@@ -10,7 +11,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.trip import TripResponse, TripUpdate
 from fastapi import APIRouter, Body, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -21,7 +22,15 @@ router = APIRouter()
 async def get_trips(
     skip: int = 0,
     limit: int = 100,
-    include_cancelled: bool = False,
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    status: Optional[TripStatus] = None,
+    has_trailer: Optional[bool] = None,
+    is_regular: Optional[bool] = None,
+    paid_amount: Optional[float] = None,
+    passenger_count: Optional[int] = None,
+    payment_status: Optional[PaymentStatus] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(deps.get_current_admin_user),
 ):
@@ -34,8 +43,40 @@ async def get_trips(
         )
         .where(Trip.is_deleted == False)
     )
-    if not include_cancelled:
-        query = query.where(Trip.status != TripStatus.CANCELLED)
+    if search:
+        query = query.where(
+            or_(
+                Trip.customer.first_name.ilike(f"%{search}%"),
+                Trip.customer.phone.ilike(f"%{search}%"),
+                Trip.arrival_location.ilike(f"%{search}%"),
+                Trip.departure_location.ilike(f"%{search}%"),
+                Trip.notes.ilike(f"%{search}%"),
+            )
+    )
+
+    if date_from is not None:
+        query = query.where(Trip.trip_date >= date.fromisoformat(date_from))
+
+    if date_to is not None:
+        query = query.where(Trip.trip_date <= date.fromisoformat(date_to))
+
+    if status is not None:
+        query = query.where(Trip.status == status)
+
+    if has_trailer is not None:
+        query = query.where(Trip.has_trailer == has_trailer)
+
+    if is_regular is not None:
+        query = query.where(Trip.is_regular == is_regular)
+
+    if paid_amount is not None:
+        query = query.where(Trip.paid_amount == paid_amount)
+
+    if passenger_count is not None:
+        query = query.where(Trip.passenger_count == passenger_count)
+
+    if payment_status is not None:
+        query = query.where(Trip.payment_status == payment_status)
 
     query = (
         query.order_by(Trip.trip_date.desc(), Trip.departure_time.asc())

@@ -10,12 +10,14 @@ import {
     Checkbox,
     Chip,
     CircularProgress,
+    Collapse,
     Dialog,
     DialogContent,
     DialogTitle,
     Divider,
     FormControlLabel,
     IconButton,
+    InputAdornment,
     InputBase,
     List,
     ListItemButton,
@@ -41,8 +43,14 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import PersonIcon from '@mui/icons-material/Person';
-import dayjs from "dayjs";
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ClearIcon from '@mui/icons-material/Clear';
+import dayjs, {Dayjs} from "dayjs";
 import "dayjs/locale/ru";
+import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
+import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs';
+import {DatePicker} from '@mui/x-date-pickers/DatePicker';
 
 import {tripsApi} from "../api/trips";
 import {TripResponse} from "../shared/types/api";
@@ -142,6 +150,28 @@ export const TripsJournal: React.FC = () => {
         return localStorage.getItem('showCancelledTrips') === 'true';
     });
 
+    const [search, setSearch] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState<{
+        date_from: Dayjs | null;
+        date_to: Dayjs | null;
+        status: string;
+        has_trailer: string;
+        is_regular: string;
+        payment_status: string;
+        passenger_count: string;
+        paid_amount: string;
+    }>({
+        date_from: null,
+        date_to: null,
+        status: '',
+        has_trailer: '',
+        is_regular: '',
+        payment_status: '',
+        passenger_count: '',
+        paid_amount: '',
+    });
+
     const [assignModal, setAssignModal] = useState<{
         open: boolean;
         tripId: string | null;
@@ -162,11 +192,24 @@ export const TripsJournal: React.FC = () => {
         currentDriver: null
     });
 
-    const loadData = async (includeCancelled: boolean) => {
+    const buildApiFilters = () => {
+        const f: Record<string, any> = {};
+        if (filters.date_from) f.date_from = filters.date_from.format('YYYY-MM-DD');
+        if (filters.date_to) f.date_to = filters.date_to.format('YYYY-MM-DD');
+        if (filters.status) f.status = filters.status;
+        if (filters.has_trailer !== '') f.has_trailer = filters.has_trailer === 'true';
+        if (filters.is_regular !== '') f.is_regular = filters.is_regular === 'true';
+        if (filters.payment_status) f.payment_status = filters.payment_status;
+        if (filters.passenger_count) f.passenger_count = Number(filters.passenger_count);
+        if (filters.paid_amount) f.paid_amount = Number(filters.paid_amount);
+        return f;
+    };
+
+    const loadData = async (includeCancelled: boolean, activeFilters = buildApiFilters()) => {
         try {
             setLoading(true);
             const [tripsData, vehiclesData, driversData] = await Promise.all([
-                tripsApi.getAll(includeCancelled),
+                tripsApi.getAll(includeCancelled, activeFilters),
                 vehiclesApi.getAll(),
                 driversApi.getAll().catch(() => [])
             ]);
@@ -236,14 +279,26 @@ export const TripsJournal: React.FC = () => {
         }
     };
 
+    const filteredTrips = useMemo(() => {
+        if (!search.trim()) return trips;
+        const q = search.toLowerCase();
+        return trips.filter(t =>
+            t.departure_location?.toLowerCase().includes(q) ||
+            t.arrival_location?.toLowerCase().includes(q) ||
+            t.customer?.first_name?.toLowerCase().includes(q) ||
+            t.customer?.phone?.toLowerCase().includes(q) ||
+            (t as any).scheduled_trip?.client_name?.toLowerCase().includes(q)
+        );
+    }, [trips, search]);
+
     const groupedTrips = useMemo(() => {
         const groups: Record<string, TripResponse[]> = {};
-        trips.forEach(t => {
+        filteredTrips.forEach(t => {
             if (!groups[t.trip_date]) groups[t.trip_date] = [];
             groups[t.trip_date].push(t);
         });
         return groups;
-    }, [trips]);
+    }, [filteredTrips]);
 
     const cellSx = {
         padding: "10px 12px", borderRight: `1px solid ${COLORS.BORDER}`,
@@ -443,13 +498,27 @@ export const TripsJournal: React.FC = () => {
         );
     };
 
+    const hasActiveFilters = Object.values(filters).some(v => v !== null && v !== '' && v !== undefined);
+
+    const handleApplyFilters = () => {
+        loadData(showCancelled, buildApiFilters());
+    };
+
+    const handleResetFilters = () => {
+        const empty = {date_from: null, date_to: null, status: '', has_trailer: '', is_regular: '', payment_status: '', passenger_count: '', paid_amount: ''};
+        setFilters(empty);
+        setSearch('');
+        loadData(showCancelled, {});
+    };
+
     if (loading && trips.length === 0) return <Box
         sx={{display: 'flex', justifyContent: 'center', mt: 10}}><CircularProgress/></Box>;
 
     return (
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ru">
         <Box sx={{p: isMobile ? 2 : 4, bgcolor: COLORS.PAGE_BG, minHeight: "100vh"}}>
             <Stack direction={{xs: "column", sm: "row"}} justifyContent="space-between" alignItems="center"
-                   mb={isMobile ? 2 : 4}>
+                   mb={2}>
                 <Typography variant={isMobile ? "h5" : "h4"} fontWeight="900"
                             sx={{letterSpacing: "-0.04em", color: "#1D1D1F", mb: {xs: 2, sm: 0}}}>
                     Журнал рейсов
@@ -469,6 +538,102 @@ export const TripsJournal: React.FC = () => {
                     label={<Typography variant="body2" fontWeight="bold">Показывать отмененные</Typography>}
                 />
             </Stack>
+
+            {/* Search + Filter bar */}
+            <Stack direction="row" spacing={1} mb={2} alignItems="center">
+                <TextField
+                    size="small" placeholder="Поиск по маршруту, клиенту..." value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    sx={{flex: 1, bgcolor: '#fff', borderRadius: '12px', '& .MuiOutlinedInput-root': {borderRadius: '12px'}}}
+                    InputProps={{
+                        startAdornment: <InputAdornment position="start"><SearchIcon sx={{color: COLORS.TEXT_SECONDARY, fontSize: 20}}/></InputAdornment>,
+                        endAdornment: search ? <InputAdornment position="end"><IconButton size="small" onClick={() => setSearch('')}><ClearIcon sx={{fontSize: 16}}/></IconButton></InputAdornment> : null
+                    }}
+                />
+                <Button
+                    variant={showFilters || hasActiveFilters ? 'contained' : 'outlined'}
+                    startIcon={<FilterListIcon/>}
+                    onClick={() => setShowFilters(p => !p)}
+                    sx={{
+                        borderRadius: '12px', fontWeight: 800, whiteSpace: 'nowrap',
+                        bgcolor: showFilters || hasActiveFilters ? COLORS.ACCENT_YELLOW : 'transparent',
+                        color: '#000', borderColor: COLORS.ACCENT_YELLOW,
+                        boxShadow: 'none',
+                        '&:hover': {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.8), boxShadow: 'none'}
+                    }}
+                >
+                    Фильтры{hasActiveFilters ? ' •' : ''}
+                </Button>
+            </Stack>
+
+            <Collapse in={showFilters}>
+                <Paper elevation={0} sx={{p: 2, mb: 2, borderRadius: '16px', border: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff'}}>
+                    <Stack spacing={2}>
+                        <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>
+                            <DatePicker
+                                label="Дата от" value={filters.date_from}
+                                onChange={(v) => setFilters(p => ({...p, date_from: v}))}
+                                slotProps={{textField: {size: 'small', sx: {flex: 1}}}}
+                            />
+                            <DatePicker
+                                label="Дата до" value={filters.date_to}
+                                onChange={(v) => setFilters(p => ({...p, date_to: v}))}
+                                slotProps={{textField: {size: 'small', sx: {flex: 1}}}}
+                            />
+                            <TextField select label="Статус" size="small" value={filters.status}
+                                onChange={(e) => setFilters(p => ({...p, status: e.target.value}))}
+                                sx={{flex: 1}}>
+                                <MenuItem value="">Все</MenuItem>
+                                <MenuItem value="PLANNED">Ожидание</MenuItem>
+                                <MenuItem value="IN_PROGRESS">В пути</MenuItem>
+                                <MenuItem value="COMPLETED">Завершен</MenuItem>
+                                <MenuItem value="CANCELLED">Отменен</MenuItem>
+                            </TextField>
+                            <TextField select label="Статус оплаты" size="small" value={filters.payment_status}
+                                onChange={(e) => setFilters(p => ({...p, payment_status: e.target.value}))}
+                                sx={{flex: 1}}>
+                                <MenuItem value="">Все</MenuItem>
+                                <MenuItem value="PAID">Оплачено</MenuItem>
+                                <MenuItem value="PENDING">Ожидает оплаты</MenuItem>
+                            </TextField>
+                        </Stack>
+                        <Stack direction={{xs: 'column', sm: 'row'}} spacing={2} alignItems="center">
+                            <TextField select label="Прицеп" size="small" value={filters.has_trailer}
+                                onChange={(e) => setFilters(p => ({...p, has_trailer: e.target.value}))}
+                                sx={{flex: 1}}>
+                                <MenuItem value="">Любой</MenuItem>
+                                <MenuItem value="true">Есть</MenuItem>
+                                <MenuItem value="false">Нет</MenuItem>
+                            </TextField>
+                            <TextField select label="Регулярный" size="small" value={filters.is_regular}
+                                onChange={(e) => setFilters(p => ({...p, is_regular: e.target.value}))}
+                                sx={{flex: 1}}>
+                                <MenuItem value="">Любой</MenuItem>
+                                <MenuItem value="true">Да</MenuItem>
+                                <MenuItem value="false">Нет</MenuItem>
+                            </TextField>
+                            <TextField label="Кол-во мест" size="small" type="number" value={filters.passenger_count}
+                                onChange={(e) => setFilters(p => ({...p, passenger_count: e.target.value}))}
+                                sx={{flex: 1}}/>
+                            <TextField label="Оплачено (от)" size="small" type="number" value={filters.paid_amount}
+                                onChange={(e) => setFilters(p => ({...p, paid_amount: e.target.value}))}
+                                sx={{flex: 1}}/>
+                            <Stack direction="row" spacing={1}>
+                                <Button variant="contained" onClick={handleApplyFilters}
+                                    sx={{borderRadius: '10px', fontWeight: 800, bgcolor: COLORS.ACCENT_YELLOW, color: '#000', boxShadow: 'none', '&:hover': {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.8), boxShadow: 'none'}}}>
+                                    Применить
+                                </Button>
+                                {hasActiveFilters && (
+                                    <Button variant="outlined" onClick={handleResetFilters}
+                                        sx={{borderRadius: '10px', fontWeight: 800, boxShadow: 'none'}}>
+                                        Сбросить
+                                    </Button>
+                                )}
+                            </Stack>
+                        </Stack>
+                    </Stack>
+                </Paper>
+            </Collapse>
 
             {Object.keys(groupedTrips).length === 0 && !loading && (
                 <Typography color="text.secondary" textAlign="center" mt={5}>
@@ -747,5 +912,6 @@ export const TripsJournal: React.FC = () => {
                 onAssign={handleAssignDriver}
             />
         </Box>
+        </LocalizationProvider>
     );
 };
