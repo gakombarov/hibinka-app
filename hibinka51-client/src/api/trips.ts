@@ -1,10 +1,12 @@
 import apiClient from "./client";
 
 export const tripsApi = {
-    getAll: async (includeCancelled: boolean = false) => {
-        const response = await apiClient.get("/trips/", {
-            params: {include_cancelled: includeCancelled}
+    getAll: async (includeCancelled: boolean = false, filters: Record<string, any> = {}) => {
+        const params: Record<string, any> = {include_cancelled: includeCancelled};
+        Object.entries(filters).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') params[k] = v;
         });
+        const response = await apiClient.get("/trips/", {params});
         return response.data;
     },
 
