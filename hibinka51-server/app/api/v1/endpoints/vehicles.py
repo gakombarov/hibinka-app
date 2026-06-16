@@ -130,6 +130,22 @@ async def update_vehicle(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@router.patch("/{vehicle_id}/toggle-active", response_model=VehicleResponse)
+async def toggle_vehicle_active(
+        vehicle_id: UUID,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(deps.get_current_admin_user),
+):
+    result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id, Vehicle.is_deleted == False))
+    vehicle = result.scalars().first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Транспортное средство не найдено")
+    vehicle.is_active = not vehicle.is_active
+    await db.commit()
+    await db.refresh(vehicle)
+    return vehicle
+
+
 @router.delete("/{vehicle_id}", response_model=VehicleResponse)
 async def delete_vehicle(
         vehicle_id: UUID,
