@@ -22,6 +22,11 @@ export interface TripCustomerInfo {
 }
 
 export interface TripBookingInfo {
+    is_round_trip?: boolean;
+    desired_trip_date?: string | null;
+    desired_departure_time?: string | null;
+    return_date?: string | null;
+    return_time?: string | null;
     total_amount: number;
     paid_amount: number;
     customer?: TripCustomerInfo;

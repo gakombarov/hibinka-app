@@ -13,6 +13,11 @@ class TripCustomerInfo(BaseModel):
 
 
 class TripBookingInfo(BaseModel):
+    is_round_trip: bool = False
+    desired_trip_date: Optional[date] = None
+    desired_departure_time: Optional[time] = None
+    return_date: Optional[date] = None
+    return_time: Optional[time] = None
     total_amount: Optional[float] = 0
     paid_amount: Optional[float] = 0
     customer: Optional[TripCustomerInfo] = None
