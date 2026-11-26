@@ -1,0 +1,37 @@
+{
+  "folders": [
+    {
+      "path": "..",
+      "name": "Hibinka51"
+    },
+    {
+      "path": "../../kafka-lock-autoscaling",
+      "name": "Kafka Lock Autoscaling"
+    }
+  ],
+  "settings": {
+    "[go]": {
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+      }
+    },
+    "go.alternateTools": {
+      "go": "~/.local/libexec/vscode-host/go",
+      "gopls": "~/.local/libexec/vscode-host/gopls",
+      "dlv": "~/.local/libexec/vscode-host/dlv"
+    }
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Kafka · тесты worker",
+        "type": "go",
+        "request": "launch",
+        "mode": "test",
+        "program": "${workspaceFolder:Kafka Lock Autoscaling}/services/worker"
+      }
+    ]
+  }
+}

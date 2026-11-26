@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Hibinka51 · FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app"],
+      "cwd": "${workspaceFolder}/hibinka51-server",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "charliermarsh.ruff",
+    "dbaeumer.vscode-eslint",
+    "github.vscode-github-actions",
+    "ms-azuretools.vscode-containers",
+    "ms-python.python",
+    "mtxr.sqltools-driver-pg",
+    "redhat.vscode-yaml",
+    "vitest.explorer"
+  ]
+}

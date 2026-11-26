@@ -1,0 +1,21 @@
+{
+  "eslint.workingDirectories": [
+    "./hibinka51-client"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "[typescript][typescriptreact][javascript][javascriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true
+  },
+  "python.testing.pytestEnabled": false
+}

@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Hibinka51 · тесты FastAPI с тестовой SQLite",
+      "type": "process",
+      "command": "${workspaceFolder}/workstation/test-hibinka-server.sh",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
