@@ -30,6 +30,17 @@ function roundTrip(prefix = ''): TripResponse[] {
     })];
 }
 
+function bookedRoundTrip(returnDate = '2026-11-26'): TripResponse[] {
+    return roundTrip().map((trip, index) => ({
+        ...trip, is_regular: false, scheduled_trip_id: null, booking_id: 'round-booking',
+        trip_date: index === 1 ? returnDate : trip.trip_date,
+        total_amount: 3000, customer: {first_name: 'Тестовый клиент', phone: '+70000000000'},
+        booking: {is_round_trip: true, desired_trip_date: '2026-11-26',
+            desired_departure_time: '08:00:00', return_date: returnDate, return_time: '10:00:00',
+            total_amount: 3000, paid_amount: 1000},
+    }));
+}
+
 describe('journal round trips', () => {
     it('shows an existing airport round trip as one entry without changing either record', () => {
         const trips = roundTrip();
@@ -111,5 +122,36 @@ describe('journal round trips', () => {
         expect(matchesJournalSearch(entry, 'аэропорт')).toBe(true);
         expect(matchesJournalSearch(entry, 'Кировск')).toBe(false);
         expect(matchesJournalSearch(entry, '   ')).toBe(true);
+    });
+
+    it('combines a round-trip booking and counts its shared price only once', () => {
+        const entries = groupJournalTrips(bookedRoundTrip(), []);
+        expect(entries).toHaveLength(1);
+        expect(entries[0].legs.map(trip => trip.id)).toEqual(['out', 'back']);
+        expect(journalTotal(entries[0])).toBe(3000);
+        expect(matchesJournalSearch(entries[0], 'тестовый клиент')).toBe(true);
+    });
+
+    it('uses booking metadata to keep the correct direction when returning on another date', () => {
+        const trips = bookedRoundTrip('2026-11-27').reverse();
+        const [entry] = groupJournalTrips(trips, []);
+        expect(entry.trip_date).toBe('2026-11-26');
+        expect(entry.legs[1].trip_date).toBe('2026-11-27');
+        expect(entry.legs.map(trip => trip.id)).toEqual(['out', 'back']);
+    });
+
+    it('does not group split bookings, one-way bookings or a route that no longer reverses', () => {
+        const trips = bookedRoundTrip();
+        expect(groupJournalTrips([...trips, {...trips[0], id: 'split'}], [])).toHaveLength(3);
+        expect(groupJournalTrips(trips.map(trip => ({...trip, booking: {...trip.booking!, is_round_trip: false}})), []))
+            .toHaveLength(2);
+        trips[1].arrival_location = 'Апатиты';
+        expect(groupJournalTrips(trips, [])).toHaveLength(2);
+    });
+
+    it('keeps both booking directions visible when one no longer matches its recorded time', () => {
+        const trips = bookedRoundTrip();
+        trips[1].departure_time = '11:00:00';
+        expect(groupJournalTrips(trips, [])).toHaveLength(2);
     });
 });

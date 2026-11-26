@@ -8,7 +8,7 @@ export interface JournalTrip {
     clientName?: string | null;
 }
 
-/** Match only an unambiguous pair from the same schedule and exact cycle times. */
+/** Match only unambiguous directions from the same schedule cycle or round-trip booking. */
 export function groupJournalTrips(
     trips: TripResponse[],
     schedules: ScheduledTripResponse[],
@@ -18,7 +18,13 @@ export function groupJournalTrips(
     const scheduleById = new Map(schedules.map(schedule => [schedule.id, schedule]));
 
     const byScheduleAndDate = new Map<string, TripResponse[]>();
+    const byBooking = new Map<string, TripResponse[]>();
     for (const trip of trips) {
+        if (trip.booking_id && !trip.scheduled_trip_id) {
+            const bucket = byBooking.get(trip.booking_id) ?? [];
+            bucket.push(trip);
+            byBooking.set(trip.booking_id, bucket);
+        }
         if (!trip.is_regular || !trip.scheduled_trip_id || trip.booking_id) continue;
         const key = `${trip.scheduled_trip_id}:${trip.trip_date}`;
         const bucket = byScheduleAndDate.get(key) ?? [];
@@ -50,6 +56,21 @@ export function groupJournalTrips(
         }
     }
 
+    for (const candidates of byBooking.values()) {
+        // Split passenger groups and incomplete bookings remain separate.
+        if (candidates.length !== 2) continue;
+        const booking = candidates[0].booking;
+        if (!booking?.is_round_trip) continue;
+        const forward = candidates.filter(trip => trip.trip_date === booking.desired_trip_date &&
+            trip.departure_time === booking.desired_departure_time);
+        const backward = candidates.filter(trip => trip.trip_date === booking.return_date &&
+            trip.departure_time === booking.return_time);
+        if (forward.length !== 1 || backward.length !== 1 || forward[0].id === backward[0].id) continue;
+        if (forward[0].departure_location !== backward[0].arrival_location ||
+            forward[0].arrival_location !== backward[0].departure_location) continue;
+        pairs.push([forward[0], backward[0]]);
+    }
+
     // Overlapping cycles or duplicate records must never silently consume a direction.
     const uses = new Map<string, number>();
     for (const pair of pairs) {
@@ -68,7 +89,8 @@ export function groupJournalTrips(
         trip_date: trip.trip_date,
         departure_time: trip.departure_time,
         legs: paired.get(trip.id) ?? [trip],
-        clientName: scheduleById.get(trip.scheduled_trip_id ?? '')?.client_name,
+        clientName: scheduleById.get(trip.scheduled_trip_id ?? '')?.client_name ||
+            trip.customer?.first_name || trip.booking?.customer?.first_name,
     }));
 }
 
@@ -77,7 +99,9 @@ export function journalRoute(entry: JournalTrip): string {
 }
 
 export function journalTotal(entry: JournalTrip): number {
-    // Only schedule legs are combined; each stores its own part of the contract price.
+    // Booking legs share one total; schedule legs each store a part of the contract price.
+    const first = entry.legs[0];
+    if (first.booking_id) return Number(first.booking?.total_amount ?? first.total_amount ?? 0);
     return entry.legs.reduce((total, trip) => total + Number(trip.total_amount ?? 0), 0);
 }
 

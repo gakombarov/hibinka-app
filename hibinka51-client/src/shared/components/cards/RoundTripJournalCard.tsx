@@ -29,7 +29,7 @@ export function RoundTripJournalCard({entry, assignmentFor, children}: Props) {
                         {journalRoute(entry)}
                     </Typography>
                     <Typography sx={{fontSize: '0.875rem', color: '#515154', mt: 0.5}}>
-                        {entry.clientName || 'По контракту'}
+                        {entry.clientName || (entry.legs[0].scheduled_trip_id ? 'По контракту' : 'Клиент не указан')}
                     </Typography>
                 </Box>
                 <Box sx={{textAlign: {xs: 'left', sm: 'right'}}}>
@@ -44,7 +44,7 @@ export function RoundTripJournalCard({entry, assignmentFor, children}: Props) {
                     <Box key={trip.id}>
                         <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
                             <Typography sx={{fontSize: '0.875rem', fontWeight: 800}}>
-                                {index === 0 ? 'Туда' : 'Обратно'}: {trip.departure_time.slice(0, 5)} · {trip.departure_location}
+                                {index === 0 ? 'Туда' : 'Обратно'}: {trip.trip_date !== entry.trip_date && `${trip.trip_date.split('-').reverse().join('.')} `}{trip.departure_time.slice(0, 5)} · {trip.departure_location}
                             </Typography>
                             <Chip label={statusLabels[trip.status] || trip.status} size="small"
                                 color={trip.status === 'CANCELLED' ? 'error' : trip.status === 'COMPLETED' ? 'success' : 'default'}/>
