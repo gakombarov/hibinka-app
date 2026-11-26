@@ -30,7 +30,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./hibinka51-server:/app
+      - ./hibinka51-server:/app:z
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   client:
@@ -43,7 +43,7 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./hibinka51-client:/app
+      - ./hibinka51-client:/app:z
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000

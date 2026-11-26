@@ -130,9 +130,9 @@ async def update_trip(
         ):
             update_data["paid_amount"] = 0
 
-        for field, value in update_data.items():
-            if field != "stops":
-                setattr(trip, field, value)
+    for field, value in update_data.items():
+        if field != "stops":
+            setattr(trip, field, value)
 
     db.add(trip)
     await db.flush()
