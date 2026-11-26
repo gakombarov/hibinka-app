@@ -30,7 +30,7 @@ services:
       - hibinka-net
 
   server:
-    image: gakombarov/hibinka-server:latest
+    image: ghcr.io/${IMAGE_NAMESPACE:-gakombarov}/hibinka-server:${IMAGE_TAG:-latest}
     container_name: hibinka-server
     restart: always
     env_file: .env
@@ -38,11 +38,10 @@ services:
       - db
     networks:
       - hibinka-net
-    volumes:
-      - ./hibinka51-server/alembic/versions:/app/alembic/versions
+    # Use the migrations shipped with this image.
 
   client:
-    image: gakombarov/hibinka-client:latest
+    image: ghcr.io/${IMAGE_NAMESPACE:-gakombarov}/hibinka-client:${IMAGE_TAG:-latest}
     container_name: hibinka-client
     restart: always
     depends_on:

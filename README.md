@@ -92,3 +92,29 @@ Full-stack веб-приложение, объединяющее бэкенд-с
 - Настройки JWT безопасности (SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES).
 
 - Белый список адресов для CORS (CORS_ORIGINS) для разграничения прав доступа браузера к API.
+
+## Деплой на VPS через GHCR
+
+При push в `main` GitHub Actions собирает и публикует образы
+`ghcr.io/gakombarov/hibinka-server` и `ghcr.io/gakombarov/hibinka-client`.
+Деплой использует тег SHA коммита, который был собран в этом запуске.
+
+Workflow передаёт на VPS актуальный `docker-compose.prod.yml`, скачивает образы,
+применяет миграции из образа сервера и обновляет только `server` и `client`.
+PostgreSQL и Nginx Proxy Manager должны быть уже запущены; рабочий каталог
+`~/hibinka-app` и production-файл `.env` должны существовать на VPS.
+
+Для SSH нужны прежние secrets `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`.
+Для публикации и скачивания используется встроенный `GITHUB_TOKEN` с правами
+`packages: write` в сборке и `packages: read` в деплое. Добавлять PAT или делать
+пакеты публичными не требуется. Авторизация на VPS хранится во временном
+каталоге Docker и удаляется при завершении SSH-скрипта.
+
+Изменения должны попасть в `main`, чтобы запустился новый workflow. Повторный
+запуск старого workflow продолжит использовать Docker Hub.
+
+Если скачивание снова прервётся, проверьте журнал на VPS:
+
+```bash
+sudo journalctl -u docker --since '30 minutes ago' --no-pager -n 100
+```

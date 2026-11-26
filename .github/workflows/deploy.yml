@@ -10,20 +10,32 @@ env:
 
 jobs:
   build-and-push:
-    name: Build & Push to Docker Hub
+    name: Build & Push to GHCR
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_namespace: ${{ steps.images.outputs.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set image namespace
+        id: images
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: echo "namespace=${REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Server
         uses: docker/build-push-action@v6
@@ -32,8 +44,10 @@ jobs:
           file: ./hibinka51-server/Dockerfile.server
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-server:${{ github.sha }}
+            ghcr.io/${{ steps.images.outputs.namespace }}/hibinka-server:latest
+            ghcr.io/${{ steps.images.outputs.namespace }}/hibinka-server:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -46,8 +60,10 @@ jobs:
           build-args: |
             VITE_API_URL=https://hibinka51.ru
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/hibinka-client:${{ github.sha }}
+            ghcr.io/${{ steps.images.outputs.namespace }}/hibinka-client:latest
+            ghcr.io/${{ steps.images.outputs.namespace }}/hibinka-client:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -55,21 +71,73 @@ jobs:
     name: Deploy to Server
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: read
+    concurrency:
+      group: production-vps
+      cancel-in-progress: false
     steps:
-      - name: Execute deployment script via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout deployment configuration
+        uses: actions/checkout@v4
+
+      - name: Copy production Compose configuration to VPS
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: hibinka-app
+          overwrite: true
+
+      - name: Execute deployment script via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE_NAMESPACE: ${{ needs.build-and-push.outputs.image_namespace }}
+          IMAGE_TAG: ${{ github.sha }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 30m
+          envs: IMAGE_NAMESPACE,IMAGE_TAG,GHCR_USERNAME,GHCR_TOKEN
           script: |
             set -eu
             cd hibinka-app
-            docker compose -f docker-compose.prod.yml --parallel 1 pull server client
+            export IMAGE_NAMESPACE IMAGE_TAG
 
-            docker compose -f docker-compose.prod.yml run --rm --no-deps server alembic upgrade head
+            # Keep the job token out of the VPS user's Docker configuration.
+            DOCKER_CONFIG=$(mktemp -d)
+            export DOCKER_CONFIG
+            trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+            unset GHCR_TOKEN
 
-            docker compose -f docker-compose.prod.yml up -d --no-deps server client
+            echo "Pulling application images (25 minute limit)..."
+            if timeout --kill-after=30s 25m docker compose -f docker-compose.prod.yml --parallel 1 pull server client; then
+              echo "Application images downloaded."
+            else
+              pull_status=$?
+              echo "Image download failed (exit code: $pull_status). Deployment stopped."
+              if [ "$pull_status" -eq 124 ] || [ "$pull_status" -eq 137 ]; then
+                echo "The image download timed out or was killed."
+              fi
+              docker_root=$(docker info --format '{{.DockerRootDir}}') || docker_root=/var/lib/docker
+              df -h / "$docker_root" || true
+              df -i / "$docker_root" || true
+              echo "On the VPS, inspect the underlying error with: sudo journalctl -u docker --since '30 minutes ago' --no-pager -n 100"
+              exit "$pull_status"
+            fi
+
+            echo "Applying database migrations..."
+            docker compose -f docker-compose.prod.yml run --rm --no-deps --pull never server alembic upgrade head
+
+            echo "Starting application containers..."
+            docker compose -f docker-compose.prod.yml up -d --no-deps --pull never server client
             docker compose -f docker-compose.prod.yml ps -a
 
             docker image prune -f
