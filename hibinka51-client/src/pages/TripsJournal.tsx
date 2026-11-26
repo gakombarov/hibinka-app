@@ -5,6 +5,7 @@ import {
     AccordionDetails,
     AccordionSummary,
     alpha,
+    Alert,
     Box,
     Button,
     Checkbox,
@@ -53,7 +54,10 @@ import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs';
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
 
 import {tripsApi} from "../api/trips";
-import {TripResponse} from "../shared/types/api";
+import type {TripResponse, ScheduledTripResponse} from "../shared/types/api";
+import {scheduledTripsApi} from "../api/scheduledTrips";
+import {groupJournalTrips, matchesJournalSearch, type JournalTrip} from "../shared/utils/journalTrips";
+import {RoundTripJournalCard} from "../shared/components/cards/RoundTripJournalCard";
 import {AssignVehicleModal} from "../features/trips/AssignVehicleModal";
 import {vehiclesApi} from "../api/vehicles";
 import {driversApi} from "../api/drivers";
@@ -145,6 +149,8 @@ export const TripsJournal: React.FC = () => {
     const [drivers, setDrivers] = useState<any>([]);
     const [trips, setTrips] = useState<TripResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [schedules, setSchedules] = useState<ScheduledTripResponse[]>([]);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const [showCancelled, setShowCancelled] = useState(() => {
         return localStorage.getItem('showCancelledTrips') === 'true';
@@ -208,15 +214,22 @@ export const TripsJournal: React.FC = () => {
     const loadData = async (includeCancelled: boolean, activeFilters = buildApiFilters()) => {
         try {
             setLoading(true);
-            const [tripsData, vehiclesData, driversData] = await Promise.all([
+            setLoadError(null);
+            const [tripsData, vehiclesData, driversData, schedulesData] = await Promise.all([
                 tripsApi.getAll(includeCancelled, activeFilters),
                 vehiclesApi.getAll(),
-                driversApi.getAll().catch(() => [])
+                driversApi.getAll().catch(() => []),
+                scheduledTripsApi.getAllAdmin().catch(() => {
+                    setLoadError('Не удалось загрузить расписание. Направления временно показаны отдельно.');
+                    return [];
+                })
             ]);
             setTrips(tripsData);
             setVehicles(vehiclesData);
             setDrivers(driversData);
+            setSchedules(schedulesData);
         } catch (e) {
+            setLoadError('Не удалось загрузить журнал рейсов. Попробуйте обновить страницу.');
             console.error(e);
         } finally {
             setLoading(false);
@@ -279,26 +292,18 @@ export const TripsJournal: React.FC = () => {
         }
     };
 
-    const filteredTrips = useMemo(() => {
-        if (!search.trim()) return trips;
-        const q = search.toLowerCase();
-        return trips.filter(t =>
-            t.departure_location?.toLowerCase().includes(q) ||
-            t.arrival_location?.toLowerCase().includes(q) ||
-            t.customer?.first_name?.toLowerCase().includes(q) ||
-            t.customer?.phone?.toLowerCase().includes(q) ||
-            (t as any).scheduled_trip?.client_name?.toLowerCase().includes(q)
-        );
-    }, [trips, search]);
+    const journalTrips = useMemo(() => groupJournalTrips(
+        trips.filter(trip => showCancelled || trip.status !== 'CANCELLED'), schedules,
+    ).filter(entry => matchesJournalSearch(entry, search)), [trips, schedules, showCancelled, search]);
 
     const groupedTrips = useMemo(() => {
-        const groups: Record<string, TripResponse[]> = {};
-        filteredTrips.forEach(t => {
-            if (!groups[t.trip_date]) groups[t.trip_date] = [];
-            groups[t.trip_date].push(t);
+        const groups: Record<string, JournalTrip[]> = {};
+        journalTrips.forEach(entry => {
+            if (!groups[entry.trip_date]) groups[entry.trip_date] = [];
+            groups[entry.trip_date].push(entry);
         });
         return groups;
-    }, [filteredTrips]);
+    }, [journalTrips]);
 
     const cellSx = {
         padding: "10px 12px", borderRight: `1px solid ${COLORS.BORDER}`,
@@ -314,7 +319,7 @@ export const TripsJournal: React.FC = () => {
     };
 
     const getAssignButtonProps = (isAssigned: boolean) => ({
-        variant: isAssigned ? "contained" : "outlined" as const,
+        variant: isAssigned ? "contained" as const : "outlined" as const,
         sx: {
             borderRadius: "10px", fontWeight: 800, fontSize: isMobile ? "0.7rem" : "0.65rem",
             borderStyle: isAssigned ? 'solid' : 'dashed', color: isAssigned ? '#000' : "#515154",
@@ -322,6 +327,14 @@ export const TripsJournal: React.FC = () => {
             '&:hover': {bgcolor: isAssigned ? alpha(COLORS.ACCENT_YELLOW, 0.8) : 'rgba(0,0,0,0.04)', boxShadow: 'none'}
         }
     });
+
+    const getAssignmentLabel = (trip: TripResponse) => {
+        const vehiclesList = Array.isArray(vehicles) ? vehicles : ((vehicles as any).items || []);
+        const driversList = Array.isArray(drivers) ? drivers : (drivers?.items || []);
+        const vehicle = trip.vehicle || vehiclesList.find((item: any) => item.id === trip.vehicle_id);
+        const driver = driversList.find((item: any) => item.id === trip.driver_id);
+        return `Авто: ${vehicle?.alias || vehicle?.license_plate || 'не назначено'} · Водитель: ${driver?.call_sign || 'не назначен'}`;
+    };
 
     const MobileTripCard = ({trip}: { trip: TripResponse }) => {
         const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
@@ -489,12 +502,193 @@ export const TripsJournal: React.FC = () => {
                     >
                         {driverDisplay}
                     </Button>
-                    <IconButton size="small" sx={{bgcolor: COLORS.PAGE_BG, borderRadius: "10px"}}
+                    {trip.booking_id && <IconButton size="small" aria-label="Открыть заявку"
+                                sx={{bgcolor: COLORS.PAGE_BG, borderRadius: "10px"}}
                                 onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
                         <OpenInNewIcon sx={{fontSize: 18}}/>
-                    </IconButton>
+                    </IconButton>}
                 </Stack>
             </Paper>
+        );
+    };
+
+    const renderTripRow = (trip: TripResponse, idx: number) => {
+        const rowBg = idx % 2 === 0 ? COLORS.PALE_YELLOW : "#FFFFFF";
+        const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
+        const isContractTrip = Boolean((trip as any).scheduled_trip_id);
+
+        const vehiclesList = Array.isArray(vehicles) ? vehicles : ((vehicles as any).items || []);
+        const vehicleObj = (trip as any).vehicle || vehiclesList.find((v: any) => v.id === (trip as any).vehicle_id);
+        const isVehicleAssigned = !!vehicleObj;
+        const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : 'Выбрать авто';
+
+        const driversList = Array.isArray(drivers) ? drivers : ((drivers as any).items || []);
+        const driverObj = (trip as any).driver || driversList.find((d: any) => d.id === (trip as any).driver_id);
+        const isDriverAssigned = !!driverObj;
+        const driverDisplay = driverObj ? driverObj.call_sign : 'Выбрать вод.';
+
+        return (
+            <TableRow key={trip.id} sx={{
+                bgcolor: rowBg,
+                opacity: trip.status === 'CANCELLED' ? 0.5 : 1,
+                "&:hover": {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05)}
+            }}>
+                <TableCell sx={cellSx}>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <AccessTimeIcon
+                            sx={{fontSize: 14, color: COLORS.ACCENT_YELLOW}}/>
+                        <Typography variant="body2" fontWeight="900"
+                                    sx={{textDecoration: trip.status === 'CANCELLED' ? 'line-through' : 'none'}}>
+                            {trip.departure_time.slice(0, 5)}
+                        </Typography>
+                    </Stack>
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    <Typography variant="body2" fontWeight="900" color="#1D1D1F">
+                        {trip.departure_location} → {trip.arrival_location}
+                    </Typography>
+                    {trip.stops && trip.stops.length > 0 && (
+                        <Typography variant="caption" sx={{
+                            fontSize: '0.65rem',
+                            display: 'block',
+                            mt: 0.2,
+                            color: COLORS.TEXT_SECONDARY,
+                            fontWeight: 700
+                        }}>
+                            📍 {[...trip.stops].sort((a, b) => a.stop_order - b.stop_order).map(s => s.location).join(' • ')}
+                        </Typography>
+                    )}
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Box sx={{minWidth: 0}}>
+                            <Typography variant="caption" fontWeight="900"
+                                        color="black" display="block">
+                                {isContractTrip ? ((trip as any).scheduled_trip?.client_name?.toUpperCase() || "ТЕНДЕР") : (trip.customer?.first_name?.toUpperCase() || "КЛИЕНТ НЕ УКАЗАН")}
+                            </Typography>
+                            {!isContractTrip && (
+                                <Typography variant="caption" color="primary" sx={{
+                                    fontWeight: 800,
+                                    fontSize: '0.65rem'
+                                }}>
+                                    {trip.customer?.phone || "НЕТ НОМЕРА"}
+                                </Typography>
+                            )}
+                        </Box>
+                        {!isContractTrip && (
+                            <IconButton size="small"
+                                        onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
+                                <OpenInNewIcon
+                                    sx={{fontSize: 14, color: "#86868B"}}/>
+                            </IconButton>
+                        )}
+                    </Stack>
+                </TableCell>
+                <TableCell sx={{...cellSx, textAlign: 'center'}}>
+                    <TextField type="number" variant="standard"
+                               defaultValue={trip.passenger_count}
+                               onBlur={(e) => handleUpdate(trip.id, {passenger_count: Number(e.target.value)})}
+                               sx={inputSx}
+                    />
+                </TableCell>
+                <TableCell sx={{...cellSx, textAlign: 'center'}}>
+                    <Checkbox size="small" checked={Boolean(trip.has_trailer)}
+                              onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
+                              sx={{borderRadius: "4px"}}
+                    />
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    <Button fullWidth {...getAssignButtonProps(isVehicleAssigned)}
+                            onClick={() => setAssignModal({
+                                open: true,
+                                tripId: trip.id,
+                                currentVehicle: vehicleObj || null
+                            })}
+                            disabled={trip.status === 'CANCELLED'}
+                    >
+                        {vehicleDisplay}
+                    </Button>
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    <Button
+                        fullWidth
+                        {...getAssignButtonProps(isDriverAssigned)}
+                        onClick={() => setAssignDriverModal({
+                            open: true,
+                            tripId: trip.id,
+                            currentDriver: driverObj || null
+                        })}
+                        disabled={trip.status === 'CANCELLED'}
+                    >
+                        {driverDisplay}
+                    </Button>
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    {isContractTrip ? (
+                        <Box sx={{textAlign: 'right'}}>
+                            <Chip label={`${trip.total_amount} ₽`} size="small"
+                                  sx={{
+                                      fontWeight: 900,
+                                      borderRadius: "6px",
+                                      width: "100%",
+                                      bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1),
+                                      color: COLORS.SUCCESS_GREEN,
+                                      border: `1px solid ${alpha(COLORS.SUCCESS_GREEN, 0.2)}`
+                                  }}
+                            />
+                            <Typography variant="caption" sx={{
+                                fontSize: '0.55rem',
+                                fontWeight: 800,
+                                color: COLORS.SUCCESS_GREEN,
+                                display: 'block',
+                                mt: 0.5,
+                                textAlign: 'center'
+                            }}>КОНТРАКТ</Typography>
+                        </Box>
+                    ) : (
+                        <TextField variant="standard"
+                                   defaultValue={trip.paid_amount || 0}
+                                   onBlur={(e) => handleUpdate(trip.id, {paid_amount: Number(e.target.value)})}
+                                   sx={{
+                                       ...inputSx,
+                                       "& .MuiInputBase-input": {
+                                           textAlign: 'right',
+                                           color: isFullyPaid ? COLORS.SUCCESS_GREEN : "#FF3B30"
+                                       }
+                                   }}
+                        />
+                    )}
+                </TableCell>
+                <TableCell sx={cellSx}>
+                    <Typography fontWeight="900" textAlign="right"
+                                sx={{color: COLORS.TEXT_MAIN, pr: 1}}>
+                        {trip.total_amount} ₽
+                    </Typography>
+                </TableCell>
+                <TableCell sx={{...cellSx, borderRight: 'none'}}>
+                    <Select value={trip.status} size="small" fullWidth
+                            variant="standard" disableUnderline
+                            onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
+                            renderValue={(v) => {
+                                const cfg = getStatusConfig(v as string);
+                                return <Chip label={cfg.label} color={cfg.color}
+                                             size="small" sx={{
+                                    fontWeight: 900,
+                                    fontSize: "0.6rem",
+                                    borderRadius: "8px",
+                                    width: "100%",
+                                    height: 22
+                                }}/>;
+                            }}
+                            sx={{"& .MuiSelect-select": {py: 0.5, display: 'flex'}}}
+                    >
+                        <MenuItem value="PLANNED">ОЖИДАНИЕ</MenuItem>
+                        <MenuItem value="IN_PROGRESS">В ПУТИ</MenuItem>
+                        <MenuItem value="COMPLETED">ЗАВЕРШЕН</MenuItem>
+                        <MenuItem value="CANCELLED">ОТМЕНЕН</MenuItem>
+                    </Select>
+                </TableCell>
+            </TableRow>
         );
     };
 
@@ -635,6 +829,8 @@ export const TripsJournal: React.FC = () => {
                 </Paper>
             </Collapse>
 
+            {loadError && <Alert severity="warning" sx={{mb: 2}}>{loadError}</Alert>}
+
             {Object.keys(groupedTrips).length === 0 && !loading && (
                 <Typography color="text.secondary" textAlign="center" mt={5}>
                     Нет рейсов
@@ -660,8 +856,12 @@ export const TripsJournal: React.FC = () => {
                     <AccordionDetails sx={{p: 0}}>
                         {isMobile ? (
                             <Box sx={{px: 0.5}}>
-                                {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map(trip => (
-                                    <MobileTripCard key={trip.id} trip={trip}/>
+                                {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map(entry => (
+                                    entry.legs.length === 1 ? <MobileTripCard key={entry.id} trip={entry.legs[0]}/> : (
+                                        <RoundTripJournalCard key={entry.id} entry={entry} assignmentFor={getAssignmentLabel}>
+                                            {entry.legs.map(trip => <MobileTripCard key={trip.id} trip={trip}/>)}
+                                        </RoundTripJournalCard>
+                                    )
                                 ))}
                             </Box>
                         ) : (
@@ -708,185 +908,20 @@ export const TripsJournal: React.FC = () => {
                                     </TableHead>
 
                                     <TableBody>
-                                        {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map((trip, idx) => {
-                                            const rowBg = idx % 2 === 0 ? COLORS.PALE_YELLOW : "#FFFFFF";
-                                            const isFullyPaid = Number(trip.paid_amount) >= Number(trip.total_amount);
-                                            const isContractTrip = Boolean((trip as any).scheduled_trip_id);
-
-                                            const vehiclesList = Array.isArray(vehicles) ? vehicles : ((vehicles as any).items || []);
-                                            const vehicleObj = (trip as any).vehicle || vehiclesList.find((v: any) => v.id === (trip as any).vehicle_id);
-                                            const isVehicleAssigned = !!vehicleObj;
-                                            const vehicleDisplay = vehicleObj ? (vehicleObj.alias || vehicleObj.license_plate) : 'Выбрать авто';
-
-                                            const driversList = Array.isArray(drivers) ? drivers : ((drivers as any).items || []);
-                                            const driverObj = (trip as any).driver || driversList.find((d: any) => d.id === (trip as any).driver_id);
-                                            const isDriverAssigned = !!driverObj;
-                                            const driverDisplay = driverObj ? driverObj.call_sign : 'Выбрать вод.';
-
-                                            return (
-                                                <TableRow key={trip.id} sx={{
-                                                    bgcolor: rowBg,
-                                                    opacity: trip.status === 'CANCELLED' ? 0.5 : 1,
-                                                    "&:hover": {bgcolor: alpha(COLORS.ACCENT_YELLOW, 0.05)}
-                                                }}>
-                                                    <TableCell sx={cellSx}>
-                                                        <Stack direction="row" spacing={0.5} alignItems="center">
-                                                            <AccessTimeIcon
-                                                                sx={{fontSize: 14, color: COLORS.ACCENT_YELLOW}}/>
-                                                            <Typography variant="body2" fontWeight="900"
-                                                                        sx={{textDecoration: trip.status === 'CANCELLED' ? 'line-through' : 'none'}}>
-                                                                {trip.departure_time.slice(0, 5)}
-                                                            </Typography>
-                                                        </Stack>
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        <Typography variant="body2" fontWeight="900" color="#1D1D1F">
-                                                            {trip.departure_location} → {trip.arrival_location}
-                                                        </Typography>
-                                                        {trip.stops && trip.stops.length > 0 && (
-                                                            <Typography variant="caption" sx={{
-                                                                fontSize: '0.65rem',
-                                                                display: 'block',
-                                                                mt: 0.2,
-                                                                color: COLORS.TEXT_SECONDARY,
-                                                                fontWeight: 700
-                                                            }}>
-                                                                📍 {[...trip.stops].sort((a, b) => a.stop_order - b.stop_order).map(s => s.location).join(' • ')}
-                                                            </Typography>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        <Stack direction="row" spacing={1} alignItems="center">
-                                                            <Box sx={{minWidth: 0}}>
-                                                                <Typography variant="caption" fontWeight="900"
-                                                                            color="black" display="block">
-                                                                    {isContractTrip ? ((trip as any).scheduled_trip?.client_name?.toUpperCase() || "ТЕНДЕР") : (trip.customer?.first_name?.toUpperCase() || "КЛИЕНТ НЕ УКАЗАН")}
-                                                                </Typography>
-                                                                {!isContractTrip && (
-                                                                    <Typography variant="caption" color="primary" sx={{
-                                                                        fontWeight: 800,
-                                                                        fontSize: '0.65rem'
-                                                                    }}>
-                                                                        {trip.customer?.phone || "НЕТ НОМЕРА"}
-                                                                    </Typography>
-                                                                )}
-                                                            </Box>
-                                                            {!isContractTrip && (
-                                                                <IconButton size="small"
-                                                                            onClick={() => navigate(`/dashboard/bookings/${trip.booking_id}`)}>
-                                                                    <OpenInNewIcon
-                                                                        sx={{fontSize: 14, color: "#86868B"}}/>
-                                                                </IconButton>
-                                                            )}
-                                                        </Stack>
-                                                    </TableCell>
-                                                    <TableCell sx={{...cellSx, textAlign: 'center'}}>
-                                                        <TextField type="number" variant="standard"
-                                                                   defaultValue={trip.passenger_count}
-                                                                   onBlur={(e) => handleUpdate(trip.id, {passenger_count: Number(e.target.value)})}
-                                                                   sx={inputSx}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell sx={{...cellSx, textAlign: 'center'}}>
-                                                        <Checkbox size="small" checked={Boolean(trip.has_trailer)}
-                                                                  onChange={(e) => handleUpdate(trip.id, {has_trailer: e.target.checked})}
-                                                                  sx={{borderRadius: "4px"}}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        <Button fullWidth {...getAssignButtonProps(isVehicleAssigned)}
-                                                                onClick={() => setAssignModal({
-                                                                    open: true,
-                                                                    tripId: trip.id,
-                                                                    currentVehicle: vehicleObj || null
-                                                                })}
-                                                                disabled={trip.status === 'CANCELLED'}
-                                                        >
-                                                            {vehicleDisplay}
-                                                        </Button>
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        <Button
-                                                            fullWidth
-                                                            {...getAssignButtonProps(isDriverAssigned)}
-                                                            onClick={() => setAssignDriverModal({
-                                                                open: true,
-                                                                tripId: trip.id,
-                                                                currentDriver: driverObj || null
-                                                            })}
-                                                            disabled={trip.status === 'CANCELLED'}
-                                                        >
-                                                            {driverDisplay}
-                                                        </Button>
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        {isContractTrip ? (
-                                                            <Box sx={{textAlign: 'right'}}>
-                                                                <Chip label={`${trip.total_amount} ₽`} size="small"
-                                                                      sx={{
-                                                                          fontWeight: 900,
-                                                                          borderRadius: "6px",
-                                                                          width: "100%",
-                                                                          bgcolor: alpha(COLORS.SUCCESS_GREEN, 0.1),
-                                                                          color: COLORS.SUCCESS_GREEN,
-                                                                          border: `1px solid ${alpha(COLORS.SUCCESS_GREEN, 0.2)}`
-                                                                      }}
-                                                                />
-                                                                <Typography variant="caption" sx={{
-                                                                    fontSize: '0.55rem',
-                                                                    fontWeight: 800,
-                                                                    color: COLORS.SUCCESS_GREEN,
-                                                                    display: 'block',
-                                                                    mt: 0.5,
-                                                                    textAlign: 'center'
-                                                                }}>КОНТРАКТ</Typography>
-                                                            </Box>
-                                                        ) : (
-                                                            <TextField variant="standard"
-                                                                       defaultValue={trip.paid_amount || 0}
-                                                                       onBlur={(e) => handleUpdate(trip.id, {paid_amount: Number(e.target.value)})}
-                                                                       sx={{
-                                                                           ...inputSx,
-                                                                           "& .MuiInputBase-input": {
-                                                                               textAlign: 'right',
-                                                                               color: isFullyPaid ? COLORS.SUCCESS_GREEN : "#FF3B30"
-                                                                           }
-                                                                       }}
-                                                            />
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell sx={cellSx}>
-                                                        <Typography fontWeight="900" textAlign="right"
-                                                                    sx={{color: COLORS.TEXT_MAIN, pr: 1}}>
-                                                            {trip.total_amount} ₽
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell sx={{...cellSx, borderRight: 'none'}}>
-                                                        <Select value={trip.status} size="small" fullWidth
-                                                                variant="standard" disableUnderline
-                                                                onChange={(e) => handleUpdate(trip.id, {status: e.target.value})}
-                                                                renderValue={(v) => {
-                                                                    const cfg = getStatusConfig(v as string);
-                                                                    return <Chip label={cfg.label} color={cfg.color}
-                                                                                 size="small" sx={{
-                                                                        fontWeight: 900,
-                                                                        fontSize: "0.6rem",
-                                                                        borderRadius: "8px",
-                                                                        width: "100%",
-                                                                        height: 22
-                                                                    }}/>;
-                                                                }}
-                                                                sx={{"& .MuiSelect-select": {py: 0.5, display: 'flex'}}}
-                                                        >
-                                                            <MenuItem value="PLANNED">ОЖИДАНИЕ</MenuItem>
-                                                            <MenuItem value="IN_PROGRESS">В ПУТИ</MenuItem>
-                                                            <MenuItem value="COMPLETED">ЗАВЕРШЕН</MenuItem>
-                                                            <MenuItem value="CANCELLED">ОТМЕНЕН</MenuItem>
-                                                        </Select>
+                                        {dayTrips.sort((a, b) => a.departure_time.localeCompare(b.departure_time)).map((entry, idx) => (
+                                            entry.legs.length === 1 ? renderTripRow(entry.legs[0], idx) : (
+                                                <TableRow key={entry.id}>
+                                                    <TableCell colSpan={10} sx={{p: 1, borderBottom: `1px solid ${COLORS.BORDER}`}}>
+                                                        <RoundTripJournalCard entry={entry} assignmentFor={getAssignmentLabel}>
+                                                            <Table sx={{tableLayout: 'fixed', minWidth: 1100}}>
+                                                                <colgroup>{Object.values(COLS).map((width, i) => <col key={i} style={{width}}/>)}</colgroup>
+                                                                <TableBody>{entry.legs.map(renderTripRow)}</TableBody>
+                                                            </Table>
+                                                        </RoundTripJournalCard>
                                                     </TableCell>
                                                 </TableRow>
-                                            );
-                                        })}
+                                            )
+                                        ))}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
